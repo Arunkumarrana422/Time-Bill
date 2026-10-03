@@ -6,7 +6,7 @@ import java.io.Serializable
 
 @Entity(tableName = "users")
 data class UserProfile(
-    @PrimaryKey val userId: String,
+    @PrimaryKey val userId: String = "",
     val name: String = "",
     val businessName: String = "",
     val mobile: String = "",
@@ -22,10 +22,10 @@ data class UserProfile(
 
 @Entity(tableName = "customers")
 data class Customer(
-    @PrimaryKey val customerId: String,
+    @PrimaryKey val customerId: String = "",
     val userId: String = "",
-    val name: String,
-    val mobile: String,
+    val name: String = "",
+    val mobile: String = "",
     val address: String = "",
     val village: String = "",
     val notes: String = "",
@@ -38,9 +38,9 @@ data class Customer(
 
 @Entity(tableName = "services")
 data class ServiceItem(
-    @PrimaryKey val serviceId: String,
+    @PrimaryKey val serviceId: String = "",
     val userId: String = "",
-    val name: String,
+    val name: String = "",
     val description: String = "",
     val hourlyRate: Double = 500.0,
     val minuteRate: Double = 8.33,
@@ -50,25 +50,25 @@ data class ServiceItem(
 
 @Entity(tableName = "jobs")
 data class Job(
-    @PrimaryKey val jobId: String,
+    @PrimaryKey val jobId: String = "",
     val userId: String = "",
-    val customerId: String,
-    val customerName: String,
-    val serviceId: String,
-    val serviceName: String,
-    val date: String, // yyyy-MM-dd
-    val startTime: String,
-    val endTime: String,
-    val totalDurationMinutes: Int,
-    val breakDurationMinutes: Int,
-    val billableDurationMinutes: Int,
-    val rate: Double,
-    val baseAmount: Double,
+    val customerId: String = "",
+    val customerName: String = "",
+    val serviceId: String = "",
+    val serviceName: String = "",
+    val date: String = "", // yyyy-MM-dd
+    val startTime: String = "",
+    val endTime: String = "",
+    val totalDurationMinutes: Int = 0,
+    val breakDurationMinutes: Int = 0,
+    val billableDurationMinutes: Int = 0,
+    val rate: Double = 0.0,
+    val baseAmount: Double = 0.0,
     val additionalChargesAmount: Double = 0.0,
     val discountAmount: Double = 0.0,
-    val finalAmount: Double,
+    val finalAmount: Double = 0.0,
     val paidAmount: Double = 0.0,
-    val pendingAmount: Double,
+    val pendingAmount: Double = 0.0,
     val paymentStatus: String = "Pending", // Pending, Partially Paid, Paid
     val status: String = "Completed", // Running, Completed, Cancelled
     val notes: String = "",
@@ -77,34 +77,34 @@ data class Job(
 
 @Entity(tableName = "payments")
 data class Payment(
-    @PrimaryKey val paymentId: String,
+    @PrimaryKey val paymentId: String = "",
     val userId: String = "",
-    val customerId: String,
+    val customerId: String = "",
     val customerName: String = "",
     val jobId: String = "",
-    val amount: Double,
+    val amount: Double = 0.0,
     val method: String = "Cash", // Cash, UPI, Bank Transfer, Other
-    val date: String,
+    val date: String = "",
     val notes: String = "",
     val createdAt: Long = System.currentTimeMillis()
 ) : Serializable
 
 @Entity(tableName = "expenses")
 data class Expense(
-    @PrimaryKey val expenseId: String,
+    @PrimaryKey val expenseId: String = "",
     val userId: String = "",
-    val name: String,
+    val name: String = "",
     val category: String = "Fuel", // Fuel, Maintenance, Labour, Transport, Repair, Machine, Other
-    val amount: Double,
-    val date: String,
+    val amount: Double = 0.0,
+    val date: String = "",
     val description: String = "",
     val paymentMethod: String = "Cash",
     val createdAt: Long = System.currentTimeMillis()
 ) : Serializable
 
 data class AdditionalCharge(
-    val name: String,
-    val quantity: Double,
-    val rate: Double,
-    val amount: Double
+    val name: String = "",
+    val quantity: Double = 0.0,
+    val rate: Double = 0.0,
+    val amount: Double = 0.0
 ) : Serializable

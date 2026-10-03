@@ -1,5 +1,7 @@
 package com.example.ui.dashboard
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -18,6 +21,8 @@ import com.example.data.model.Job
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.navigation.Screen
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,6 +33,25 @@ fun DashboardScreen(
     repository: TimeBillRepository,
     onNavigate: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    var backPressedTime by remember { mutableStateOf(0L) }
+    var showExitBanner by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    BackHandler {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - backPressedTime < 2000L) {
+            (context as? android.app.Activity)?.finish()
+        } else {
+            backPressedTime = currentTime
+            showExitBanner = true
+            scope.launch {
+                delay(2000L)
+                showExitBanner = false
+            }
+        }
+    }
+
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
     val customersState = repository.observeCustomers(currentUserId).collectAsState(initial = emptyList())
     val paymentsState = repository.observePayments(currentUserId).collectAsState(initial = emptyList())
@@ -46,222 +70,260 @@ fun DashboardScreen(
     val totalPending = jobsState.value.sumOf { it.pendingAmount }
     val totalReceived = paymentsState.value.sumOf { it.amount }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("🚜 Time Bill Dashboard", fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = { onNavigate(Screen.Settings.route) }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("🚜 Time Bill Dashboard", fontWeight = FontWeight.Bold) },
+                    actions = {
+                        IconButton(onClick = { onNavigate(Screen.Settings.route) }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                )
+            },
+            bottomBar = {
+                NavigationBar {
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                        label = { Text("Home") },
+                        selected = true,
+                        onClick = {}
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Work, contentDescription = null) },
+                        label = { Text("Jobs") },
+                        selected = false,
+                        onClick = { onNavigate(Screen.Jobs.route) }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.People, contentDescription = null) },
+                        label = { Text("Customers") },
+                        selected = false,
+                        onClick = { onNavigate(Screen.Customers.route) }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
+                        label = { Text("Reports") },
+                        selected = false,
+                        onClick = { onNavigate(Screen.Reports.route) }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Menu, contentDescription = null) },
+                        label = { Text("More") },
+                        selected = false,
+                        onClick = { onNavigate(Screen.Settings.route) }
+                    )
+                }
+            },
+            floatingActionButton = {
+                ExtendedFloatingActionButton(
+                    onClick = { onNavigate(Screen.Timer.route) },
+                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
+                    text = { Text("Start Work", fontWeight = FontWeight.Bold) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+        ) { padding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Summary Cards Grid
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        MetricCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Today's Earnings",
+                            value = "₹${todayEarnings.toInt()}",
+                            subtitle = todayHoursFormatted,
+                            icon = Icons.Default.TrendingUp,
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                        MetricCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Pending Payments",
+                            value = "₹${totalPending.toInt()}",
+                            subtitle = "${customersState.value.size} customers",
+                            icon = Icons.Default.Pending,
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            )
-        },
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    label = { Text("Home") },
-                    selected = true,
-                    onClick = {}
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Work, contentDescription = null) },
-                    label = { Text("Jobs") },
-                    selected = false,
-                    onClick = { onNavigate(Screen.Jobs.route) }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.People, contentDescription = null) },
-                    label = { Text("Customers") },
-                    selected = false,
-                    onClick = { onNavigate(Screen.Customers.route) }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
-                    label = { Text("Reports") },
-                    selected = false,
-                    onClick = { onNavigate(Screen.Reports.route) }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Menu, contentDescription = null) },
-                    label = { Text("More") },
-                    selected = false,
-                    onClick = { onNavigate(Screen.Settings.route) }
-                )
-            }
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { onNavigate(Screen.Timer.route) },
-                icon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
-                text = { Text("Start Work", fontWeight = FontWeight.Bold) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Summary Cards Grid
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    MetricCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Today's Earnings",
-                        value = "₹${todayEarnings.toInt()}",
-                        subtitle = todayHoursFormatted,
-                        icon = Icons.Default.TrendingUp,
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                    MetricCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Pending Payments",
-                        value = "₹${totalPending.toInt()}",
-                        subtitle = "${customersState.value.size} customers",
-                        icon = Icons.Default.Pending,
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
                 }
-            }
 
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    MetricCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Month Earnings",
-                        value = "₹${monthEarnings.toInt()}",
-                        subtitle = "${monthJobs.size} jobs done",
-                        icon = Icons.Default.CalendarMonth,
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    )
-                    MetricCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Total Received",
-                        value = "₹${totalReceived.toInt()}",
-                        subtitle = "${paymentsState.value.size} payments",
-                        icon = Icons.Default.CheckCircle,
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                    )
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        MetricCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Month Earnings",
+                            value = "₹${monthEarnings.toInt()}",
+                            subtitle = "${monthJobs.size} jobs done",
+                            icon = Icons.Default.CalendarMonth,
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                        MetricCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Total Received",
+                            value = "₹${totalReceived.toInt()}",
+                            subtitle = "${paymentsState.value.size} payments",
+                            icon = Icons.Default.CheckCircle,
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                        )
+                    }
                 }
-            }
 
-            // Quick Actions
-            item {
-                Text(
-                    text = "Quick Actions",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    QuickActionButton("Start Timer", Icons.Default.Timer) { onNavigate(Screen.Timer.route) }
-                    QuickActionButton("Manual Job", Icons.Default.EditNote) { onNavigate(Screen.ManualJob.route) }
-                    QuickActionButton("Customers", Icons.Default.PersonAdd) { onNavigate(Screen.Customers.route) }
-                    QuickActionButton("Expenses", Icons.Default.Receipt) { onNavigate(Screen.Expenses.route) }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    QuickActionButton("Payments", Icons.Default.Payments) { onNavigate(Screen.Payments.route) }
-                    QuickActionButton("Calendar", Icons.Default.DateRange) { onNavigate(Screen.Calendar.route) }
-                    QuickActionButton("Services", Icons.Default.Build) { onNavigate(Screen.Services.route) }
-                    QuickActionButton("Reports", Icons.Default.Assessment) { onNavigate(Screen.Reports.route) }
-                }
-            }
-
-            // Recent Jobs Section
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                // Quick Actions
+                item {
                     Text(
-                        text = "Recent Jobs",
+                        text = "Quick Actions",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    TextButton(onClick = { onNavigate(Screen.Jobs.route) }) {
-                        Text("View All")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        QuickActionButton("Start Timer", Icons.Default.Timer) { onNavigate(Screen.Timer.route) }
+                        QuickActionButton("Manual Job", Icons.Default.EditNote) { onNavigate(Screen.ManualJob.route) }
+                        QuickActionButton("Customers", Icons.Default.PersonAdd) { onNavigate(Screen.Customers.route) }
+                        QuickActionButton("Expenses", Icons.Default.Receipt) { onNavigate(Screen.Expenses.route) }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        QuickActionButton("Payments", Icons.Default.Payments) { onNavigate(Screen.Payments.route) }
+                        QuickActionButton("Calendar", Icons.Default.DateRange) { onNavigate(Screen.Calendar.route) }
+                        QuickActionButton("Services", Icons.Default.Build) { onNavigate(Screen.Services.route) }
+                        QuickActionButton("Reports", Icons.Default.Assessment) { onNavigate(Screen.Reports.route) }
                     }
                 }
-            }
 
-            if (jobsState.value.isEmpty()) {
+                // Recent Jobs Section
                 item {
-                    Card(
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp).fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("No jobs recorded yet.", style = MaterialTheme.typography.bodyLarge)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(onClick = { onNavigate(Screen.Timer.route) }) {
-                                Text("Start Your First Job")
-                            }
+                        Text(
+                            text = "Recent Jobs",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        TextButton(onClick = { onNavigate(Screen.Jobs.route) }) {
+                            Text("View All")
                         }
                     }
                 }
-            } else {
-                items(jobsState.value.take(5)) { job ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onNavigate(Screen.JobDetail.createRoute(job.jobId)) },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+
+                if (jobsState.value.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(job.customerName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                Text("${job.serviceName} • ${job.date}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("Duration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m", style = MaterialTheme.typography.bodySmall)
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text("₹${job.finalAmount}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = when (job.paymentStatus) {
-                                        "Paid" -> MaterialTheme.colorScheme.primaryContainer
-                                        "Partially Paid" -> MaterialTheme.colorScheme.secondaryContainer
-                                        else -> MaterialTheme.colorScheme.errorContainer
-                                    }
-                                ) {
-                                    Text(
-                                        text = job.paymentStatus,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                            Column(
+                                modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text("No jobs recorded yet.", style = MaterialTheme.typography.bodyLarge)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(onClick = { onNavigate(Screen.Timer.route) }) {
+                                    Text("Start Your First Job")
                                 }
                             }
                         }
                     }
+                } else {
+                    items(jobsState.value.take(5)) { job ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onNavigate(Screen.JobDetail.createRoute(job.jobId)) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(job.customerName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    Text("${job.serviceName} • ${job.date}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("Duration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m", style = MaterialTheme.typography.bodySmall)
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = when (job.paymentStatus) {
+                                            "Paid" -> MaterialTheme.colorScheme.primaryContainer
+                                            "Partially Paid" -> MaterialTheme.colorScheme.secondaryContainer
+                                            else -> MaterialTheme.colorScheme.errorContainer
+                                        }
+                                    ) {
+                                        Text(
+                                            text = job.paymentStatus,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Floating Animated Pill Banner overlaying on top without affecting theme/layout
+        AnimatedVisibility(
+            visible = showExitBanner,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 64.dp),
+            enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { -it })
+        ) {
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.inverseSurface,
+                shadowElevation = 8.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.inverseOnSurface,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Press back again to exit",
+                        color = MaterialTheme.colorScheme.inverseOnSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }

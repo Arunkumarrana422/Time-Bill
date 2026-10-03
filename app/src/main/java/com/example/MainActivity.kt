@@ -93,15 +93,12 @@ class MainActivity : ComponentActivity() {
                             currentUser?.uid?.let { uid ->
                                 scope.launch {
                                     try {
+                                        // Fetch and load all cloud data from Firebase first (for fresh install / data clear)
+                                        repository.syncDataFromFirestore(uid)
                                         repository.seedDefaultServicesIfNeeded(uid)
                                         val profile = repository.getUser(uid)
                                         userProfile = profile
-                                        isProfileLoaded = true // Load instantly from local DB
-
-                                        // Sync cloud data in background without blocking UI
-                                        launch(Dispatchers.IO) {
-                                            repository.syncDataFromFirestore(uid)
-                                        }
+                                        isProfileLoaded = true
 
                                         repository.observeUserProfile(uid).collectLatest { p ->
                                             userProfile = p

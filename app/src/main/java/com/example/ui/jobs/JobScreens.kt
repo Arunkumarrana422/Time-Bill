@@ -1,5 +1,6 @@
 package com.example.ui.jobs
 
+import androidx.activity.compose.BackHandler
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
@@ -33,6 +34,9 @@ fun JobListScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    BackHandler {
+        onNavigate(Screen.Dashboard.route)
+    }
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
     var filterStatus by remember { mutableStateOf("All") }
 

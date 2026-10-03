@@ -1,5 +1,6 @@
 package com.example.ui.settings
 
+import androidx.activity.compose.BackHandler
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -41,6 +42,9 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
     onBack: () -> Unit
 ) {
+    BackHandler {
+        onNavigate(Screen.Dashboard.route)
+    }
     val auth = Firebase.auth
     val scope = rememberCoroutineScope()
     val userProfileState = repository.observeUserProfile(currentUserId).collectAsState(initial = null)

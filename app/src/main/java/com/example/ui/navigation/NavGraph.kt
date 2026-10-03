@@ -85,7 +85,13 @@ fun TimeBillNavGraph(
             DashboardScreen(
                 currentUserId = currentUserId,
                 repository = repository,
-                onNavigate = { route -> navController.navigate(route) }
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.Dashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
             )
         }
         composable(Screen.Timer.route) {
@@ -106,8 +112,18 @@ fun TimeBillNavGraph(
             CustomerListScreen(
                 currentUserId = currentUserId,
                 repository = repository,
-                onNavigate = { route -> navController.navigate(route) },
-                onBack = { navController.popBackStack() }
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.Dashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onBack = {
+                    navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(Screen.Dashboard.route) { inclusive = true }
+                    }
+                }
             )
         }
         composable(Screen.CustomerDetail.route) { backStackEntry ->
@@ -130,8 +146,18 @@ fun TimeBillNavGraph(
             JobListScreen(
                 currentUserId = currentUserId,
                 repository = repository,
-                onNavigate = { route -> navController.navigate(route) },
-                onBack = { navController.popBackStack() }
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.Dashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onBack = {
+                    navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(Screen.Dashboard.route) { inclusive = true }
+                    }
+                }
             )
         }
         composable(Screen.JobDetail.route) { backStackEntry ->
@@ -161,8 +187,18 @@ fun TimeBillNavGraph(
             ReportsScreen(
                 currentUserId = currentUserId,
                 repository = repository,
-                onNavigate = { route -> navController.navigate(route) },
-                onBack = { navController.popBackStack() }
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.Dashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onBack = {
+                    navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(Screen.Dashboard.route) { inclusive = true }
+                    }
+                }
             )
         }
         composable(Screen.Calendar.route) {
@@ -176,9 +212,19 @@ fun TimeBillNavGraph(
             SettingsScreen(
                 currentUserId = currentUserId,
                 repository = repository,
-                onNavigate = { route -> navController.navigate(route) },
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.Dashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
                 onSignOut = onSignOut,
-                onBack = { navController.popBackStack() }
+                onBack = {
+                    navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(Screen.Dashboard.route) { inclusive = true }
+                    }
+                }
             )
         }
     }

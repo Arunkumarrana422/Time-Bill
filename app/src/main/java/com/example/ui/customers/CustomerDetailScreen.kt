@@ -45,6 +45,10 @@ fun CustomerDetailScreen(
         return
     }
 
+    val totalBilling = customerJobs.sumOf { it.finalAmount }
+    val totalPaid = customerPayments.sumOf { it.amount }
+    val pendingDue = (totalBilling - totalPaid).coerceAtLeast(0.0)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -62,7 +66,7 @@ fun CustomerDetailScreen(
                         Icon(Icons.Default.Phone, contentDescription = "Call")
                     }
                     IconButton(onClick = {
-                        val msg = "Hello ${customer.name}, your pending balance is ₹${customer.pendingAmount} for Time Bill work. Please make payment at your earliest convenience. Thank you!"
+                        val msg = "Hello ${customer.name}, your pending balance is ₹${pendingDue.toInt()} for Time Bill work. Please make payment at your earliest convenience. Thank you!"
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=${customer.mobile}&text=${Uri.encode(msg)}"))
                         context.startActivity(intent)
                     }) {
@@ -97,18 +101,21 @@ fun CustomerDetailScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Divider()
                         Spacer(modifier = Modifier.height(12.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column {
-                                Text("Total Billing", style = MaterialTheme.typography.bodySmall)
-                                Text("₹${customer.totalAmount}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Total Billing", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("₹${totalBilling.toInt()}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             }
-                            Column {
-                                Text("Total Paid", style = MaterialTheme.typography.bodySmall)
-                                Text("₹${customer.totalAmount - customer.pendingAmount}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Total Paid", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("₹${totalPaid.toInt()}", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.primary)
                             }
-                            Column {
-                                Text("Pending Due", style = MaterialTheme.typography.bodySmall)
-                                Text("₹${customer.pendingAmount}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.error)
+                            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                                Text("Pending Due", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("₹${pendingDue.toInt()}", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -140,7 +147,7 @@ fun CustomerDetailScreen(
                                 Text("${job.date} • ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m", style = MaterialTheme.typography.bodySmall)
                             }
                             Column(horizontalAlignment = Alignment.End) {
-                                Text("₹${job.finalAmount}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 Text(job.paymentStatus, style = MaterialTheme.typography.bodySmall)
                             }
                         }
@@ -172,7 +179,7 @@ fun CustomerDetailScreen(
                                 Text("Paid via ${payment.method}", fontWeight = FontWeight.Bold)
                                 Text(payment.date, style = MaterialTheme.typography.bodySmall)
                             }
-                            Text("₹${payment.amount}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 16.sp)
+                            Text("₹${payment.amount.toInt()}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 16.sp)
                         }
                     }
                 }

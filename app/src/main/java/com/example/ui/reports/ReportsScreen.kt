@@ -1,5 +1,6 @@
 package com.example.ui.reports
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +24,9 @@ fun ReportsScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    BackHandler {
+        onNavigate(Screen.Dashboard.route)
+    }
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
     val paymentsState = repository.observePayments(currentUserId).collectAsState(initial = emptyList())
     val expensesState = repository.observeExpenses(currentUserId).collectAsState(initial = emptyList())
