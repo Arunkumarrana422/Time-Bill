@@ -1,6 +1,7 @@
 package com.example
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -15,6 +16,7 @@ import com.example.ui.auth.AuthScreen
 import com.example.ui.navigation.TimeBillNavGraph
 import com.example.ui.theme.TimeBillTheme
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.collectLatest
@@ -23,6 +25,12 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
+            FirebaseApp.initializeApp(this)
+        } catch (e: Exception) {
+            Log.e("MainActivity", "FirebaseApp init error: ${e.message}")
+        }
+
         enableEdgeToEdge()
 
         val repository = TimeBillRepository(this)
@@ -30,48 +38,79 @@ class MainActivity : ComponentActivity() {
         setContent {
             TimeBillTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    var currentUser by remember { mutableStateOf(Firebase.auth.currentUser) }
+                    var currentUser by remember {
+                        mutableStateOf(
+                            try {
+                                Firebase.auth.currentUser
+                            } catch (e: Exception) {
+                                null
+                            }
+                        )
+                    }
+                    var isGuestMode by remember { mutableStateOf(false) }
                     val navController = rememberNavController()
                     val scope = rememberCoroutineScope()
 
                     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
 
                     DisposableEffect(Unit) {
-                        val listener = FirebaseAuth.AuthStateListener { auth ->
-                            currentUser = auth.currentUser
+                        val auth = try { Firebase.auth } catch (e: Exception) { null }
+                        val listener = FirebaseAuth.AuthStateListener { fAuth ->
+                            currentUser = fAuth.currentUser
                         }
-                        Firebase.auth.addAuthStateListener(listener)
+                        auth?.addAuthStateListener(listener)
                         onDispose {
-                            Firebase.auth.removeAuthStateListener(listener)
+                            try {
+                                auth?.removeAuthStateListener(listener)
+                            } catch (e: Exception) {
+                                // ignore
+                            }
                         }
                     }
 
-                    LaunchedEffect(currentUser) {
-                        currentUser?.uid?.let { uid ->
+                    val effectiveUserId = currentUser?.uid ?: if (isGuestMode) "offline_user" else null
+
+                    LaunchedEffect(effectiveUserId) {
+                        effectiveUserId?.let { uid ->
                             scope.launch {
-                                repository.seedDefaultServicesIfNeeded(uid)
-                                repository.observeUserProfile(uid).collectLatest { profile ->
-                                    userProfile = profile
+                                try {
+                                    repository.seedDefaultServicesIfNeeded(uid)
+                                    repository.observeUserProfile(uid).collectLatest { profile ->
+                                        userProfile = profile
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("MainActivity", "Data load exception: ${e.message}")
                                 }
                             }
                         }
                     }
 
-                    if (currentUser == null) {
+                    if (effectiveUserId == null) {
                         AuthScreen(
                             onAuthSuccess = {
-                                currentUser = Firebase.auth.currentUser
+                                currentUser = try { Firebase.auth.currentUser } catch (e: Exception) { null }
+                                if (currentUser == null) {
+                                    isGuestMode = true
+                                }
+                            },
+                            onContinueOffline = {
+                                isGuestMode = true
                             }
                         )
                     } else {
-                        val userId = currentUser!!.uid
                         TimeBillNavGraph(
                             navController = navController,
                             repository = repository,
-                            currentUserId = userId,
+                            currentUserId = effectiveUserId,
                             userProfile = userProfile,
                             onSignOut = {
+                                try {
+                                    Firebase.auth.signOut()
+                                } catch (e: Exception) {
+                                    // ignore
+                                }
                                 currentUser = null
+                                isGuestMode = false
                             }
                         )
                     }

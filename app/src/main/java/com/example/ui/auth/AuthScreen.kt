@@ -38,11 +38,18 @@ import kotlinx.coroutines.tasks.await
 
 @Composable
 fun AuthScreen(
-    onAuthSuccess: () -> Unit
+    onAuthSuccess: () -> Unit,
+    onContinueOffline: () -> Unit = onAuthSuccess
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val credentialManager = remember { CredentialManager.create(context) }
+    val credentialManager = remember { 
+        try {
+            CredentialManager.create(context)
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     var isRegisterMode by remember { mutableStateOf(false) }
     var isForgotPassword by remember { mutableStateOf(false) }
@@ -58,9 +65,19 @@ fun AuthScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
 
-    val auth = Firebase.auth
+    val auth = remember {
+        try {
+            Firebase.auth
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     fun handleGoogleSignIn() {
+        if (credentialManager == null || auth == null) {
+            errorMessage = "Google Play Services is unavailable on this device. You can use Email/Password or Offline Mode."
+            return
+        }
         val clientId = try {
             context.getString(R.string.default_web_client_id)
         } catch (e: Exception) {
@@ -246,6 +263,10 @@ fun AuthScreen(
 
                     Button(
                         onClick = {
+                            if (auth == null) {
+                                errorMessage = "Firebase Auth service is unavailable. Please click 'Continue in Offline Mode' below."
+                                return@Button
+                            }
                             if (email.isBlank()) {
                                 errorMessage = "Please enter email"
                                 return@Button
@@ -341,6 +362,15 @@ fun AuthScreen(
                         }) {
                             Text(if (isRegisterMode) "Existing User? Login" else "Create Account")
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    TextButton(
+                        onClick = { onContinueOffline() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("🚀 Continue in Offline / Local Mode", color = MaterialTheme.colorScheme.secondary)
                     }
                 }
             }
