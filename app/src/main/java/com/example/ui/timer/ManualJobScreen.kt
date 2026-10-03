@@ -510,8 +510,7 @@ fun ManualJobScreen(
                                         serviceId = "srv_${System.currentTimeMillis()}",
                                         userId = currentUserId,
                                         name = newServiceName.trim(),
-                                        hourlyRate = sRate,
-                                        minimumCharge = sRate / 2
+                                        hourlyRate = sRate
                                     )
                                     repository.saveService(newSrv)
                                     selectedService = newSrv

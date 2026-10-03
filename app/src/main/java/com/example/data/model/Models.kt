@@ -44,7 +44,6 @@ data class ServiceItem(
     val description: String = "",
     val hourlyRate: Double = 500.0,
     val minuteRate: Double = 8.33,
-    val minimumCharge: Double = 100.0,
     val isActive: Boolean = true
 ) : Serializable
 

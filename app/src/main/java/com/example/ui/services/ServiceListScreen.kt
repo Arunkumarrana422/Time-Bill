@@ -33,14 +33,12 @@ fun ServiceListScreen(
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var hourlyRate by remember { mutableStateOf("500") }
-    var minCharge by remember { mutableStateOf("100") }
 
     // Edit service state
     var editingService by remember { mutableStateOf<ServiceItem?>(null) }
     var editName by remember { mutableStateOf("") }
     var editDescription by remember { mutableStateOf("") }
     var editHourlyRate by remember { mutableStateOf("") }
-    var editMinCharge by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
 
@@ -82,7 +80,6 @@ fun ServiceListScreen(
                             editName = service.name
                             editDescription = service.description
                             editHourlyRate = service.hourlyRate.toInt().toString()
-                            editMinCharge = service.minimumCharge.toInt().toString()
                         },
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -99,10 +96,7 @@ fun ServiceListScreen(
                             }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text("₹${service.hourlyRate.toInt()}/hr", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
-                                Text("Min: ₹${service.minimumCharge.toInt()}", style = MaterialTheme.typography.bodySmall)
-                            }
+                            Text("₹${service.hourlyRate.toInt()}/hr", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
                             Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         }
                     }
@@ -119,7 +113,6 @@ fun ServiceListScreen(
                         OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Service Name *") }, singleLine = true)
                         OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") }, singleLine = true)
                         OutlinedTextField(value = hourlyRate, onValueChange = { hourlyRate = it }, label = { Text("Hourly Rate (₹) *") }, singleLine = true)
-                        OutlinedTextField(value = minCharge, onValueChange = { minCharge = it }, label = { Text("Minimum Charge (₹)") }, singleLine = true)
                     }
                 },
                 confirmButton = {
@@ -136,7 +129,6 @@ fun ServiceListScreen(
                                     description = description,
                                     hourlyRate = hr,
                                     minuteRate = hr / 60.0,
-                                    minimumCharge = minCharge.toDoubleOrNull() ?: 100.0,
                                     isActive = true
                                 )
                                 repository.saveService(service)
@@ -166,7 +158,6 @@ fun ServiceListScreen(
                         OutlinedTextField(value = editName, onValueChange = { editName = it }, label = { Text("Service Name *") }, singleLine = true)
                         OutlinedTextField(value = editDescription, onValueChange = { editDescription = it }, label = { Text("Description") }, singleLine = true)
                         OutlinedTextField(value = editHourlyRate, onValueChange = { editHourlyRate = it }, label = { Text("Hourly Rate (₹) *") }, singleLine = true)
-                        OutlinedTextField(value = editMinCharge, onValueChange = { editMinCharge = it }, label = { Text("Minimum Charge (₹)") }, singleLine = true)
                     }
                 },
                 confirmButton = {
@@ -174,13 +165,11 @@ fun ServiceListScreen(
                         onClick = {
                             if (editName.isBlank()) return@Button
                             val hr = editHourlyRate.toDoubleOrNull() ?: editingService!!.hourlyRate
-                            val min = editMinCharge.toDoubleOrNull() ?: editingService!!.minimumCharge
                             val updated = editingService!!.copy(
                                 name = editName.trim(),
                                 description = editDescription.trim(),
                                 hourlyRate = hr,
-                                minuteRate = hr / 60.0,
-                                minimumCharge = min
+                                minuteRate = hr / 60.0
                             )
                             scope.launch {
                                 repository.saveService(updated)

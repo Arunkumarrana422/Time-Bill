@@ -226,14 +226,14 @@ class TimeBillRepository(private val context: Context) {
             val existing = appDb.serviceDao().getServicesList(userId)
             if (existing.isEmpty()) {
                 val defaultServices = listOf(
-                    ServiceItem(serviceId = "srv_1_$userId", userId = userId, name = "Ploughing / जुताई", description = "Tractor field ploughing", hourlyRate = 600.0, minimumCharge = 300.0),
-                    ServiceItem(serviceId = "srv_2_$userId", userId = userId, name = "Rotavator / रोटावेटर", description = "Fine soil preparation", hourlyRate = 800.0, minimumCharge = 400.0),
-                    ServiceItem(serviceId = "srv_3_$userId", userId = userId, name = "Cultivator / कल्टीवेटर", description = "Soil loosening & weed removal", hourlyRate = 500.0, minimumCharge = 250.0),
-                    ServiceItem(serviceId = "srv_4_$userId", userId = userId, name = "Harvester / कटाई", description = "Crop harvesting", hourlyRate = 1200.0, minimumCharge = 600.0),
-                    ServiceItem(serviceId = "srv_5_$userId", userId = userId, name = "Thresher / थ्रेशर", description = "Grain separation", hourlyRate = 700.0, minimumCharge = 350.0),
-                    ServiceItem(serviceId = "srv_6_$userId", userId = userId, name = "Trolley Transport / ट्रॉली ढुलाई", description = "Goods & crop transportation", hourlyRate = 500.0, minimumCharge = 250.0),
-                    ServiceItem(serviceId = "srv_7_$userId", userId = userId, name = "Spraying / कीटनाशक छिड़काव", description = "Pesticide & fertilizer spray", hourlyRate = 400.0, minimumCharge = 200.0),
-                    ServiceItem(serviceId = "srv_8_$userId", userId = userId, name = "General Work / सामान्य कार्य", description = "General hourly machinery work", hourlyRate = 500.0, minimumCharge = 250.0)
+                    ServiceItem(serviceId = "srv_1_$userId", userId = userId, name = "Ploughing / जुताई", description = "Tractor field ploughing", hourlyRate = 600.0),
+                    ServiceItem(serviceId = "srv_2_$userId", userId = userId, name = "Rotavator / रोटावेटर", description = "Fine soil preparation", hourlyRate = 800.0),
+                    ServiceItem(serviceId = "srv_3_$userId", userId = userId, name = "Cultivator / कल्टीवेटर", description = "Soil loosening & weed removal", hourlyRate = 500.0),
+                    ServiceItem(serviceId = "srv_4_$userId", userId = userId, name = "Harvester / कटाई", description = "Crop harvesting", hourlyRate = 1200.0),
+                    ServiceItem(serviceId = "srv_5_$userId", userId = userId, name = "Thresher / थ्रेशर", description = "Grain separation", hourlyRate = 700.0),
+                    ServiceItem(serviceId = "srv_6_$userId", userId = userId, name = "Trolley Transport / ट्रॉली ढुलाई", description = "Goods & crop transportation", hourlyRate = 500.0),
+                    ServiceItem(serviceId = "srv_7_$userId", userId = userId, name = "Spraying / कीटनाशक छिड़काव", description = "Pesticide & fertilizer spray", hourlyRate = 400.0),
+                    ServiceItem(serviceId = "srv_8_$userId", userId = userId, name = "General Work / सामान्य कार्य", description = "General hourly machinery work", hourlyRate = 500.0)
                 )
                 defaultServices.forEach { service ->
                     saveService(service)

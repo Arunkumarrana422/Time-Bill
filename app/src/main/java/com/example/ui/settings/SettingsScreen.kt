@@ -50,13 +50,16 @@ fun SettingsScreen(
     val userProfileState = repository.observeUserProfile(currentUserId).collectAsState(initial = null)
     val userProfile = userProfileState.value
 
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         uri?.let {
             scope.launch {
                 val current = userProfile ?: UserProfile(userId = currentUserId)
-                repository.saveUserProfile(current.copy(profilePhotoUri = it.toString()))
+                val updatedProfile = current.copy(profilePhotoUri = it.toString())
+                repository.saveUserProfile(updatedProfile)
             }
         }
     }
@@ -125,11 +128,11 @@ fun SettingsScreen(
                 Column(
                     modifier = Modifier.padding(20.dp).fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text("User Profile", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.align(Alignment.Start))
 
-                    // Profile Photo
+                    // Profile Photo Circle
                     Box(
                         modifier = Modifier
                             .size(100.dp)
@@ -142,7 +145,8 @@ fun SettingsScreen(
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        if (!userProfile?.profilePhotoUri.isNullOrEmpty()) {
+                        val hasPhoto = !userProfile?.profilePhotoUri.isNullOrEmpty()
+                        if (hasPhoto) {
                             AsyncImage(
                                 model = userProfile?.profilePhotoUri,
                                 contentDescription = "Profile Photo",
@@ -152,32 +156,30 @@ fun SettingsScreen(
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Person,
-                                contentDescription = "Add Photo",
+                                contentDescription = "Profile Icon",
                                 modifier = Modifier.size(50.dp),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.3f)),
-                            contentAlignment = Alignment.BottomCenter
-                        ) {
-                            Text(
-                                "Edit Photo",
-                                color = Color.White,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 6.dp)
-                            )
+                            // Camera icon with fading when no photo uploaded
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Upload Photo",
+                                    modifier = Modifier.size(28.dp),
+                                    tint = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
-
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         ProfileInfoRow(label = "Name", value = userProfile?.name.takeIf { !it.isNullOrBlank() } ?: auth.currentUser?.displayName ?: "Not set")
                         ProfileInfoRow(label = "Business Name", value = userProfile?.businessName.takeIf { !it.isNullOrBlank() } ?: "Not set")
@@ -187,26 +189,7 @@ fun SettingsScreen(
                 }
             }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Cloud Sync & Backup", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text("Data is automatically synced with Firebase Firestore when online.")
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                repository.syncDataFromFirestore(currentUserId)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Sync Now")
-                    }
-                }
-            }
-
+            // Account Actions / Logout Section
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -215,10 +198,7 @@ fun SettingsScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Account Actions", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onErrorContainer)
                     Button(
-                        onClick = {
-                            auth.signOut()
-                            onSignOut()
-                        },
+                        onClick = { showLogoutDialog = true },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -227,6 +207,31 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Logout Confirmation") },
+            text = { Text("Are you sure you want to log out of your account?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        auth.signOut()
+                        onSignOut()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Logout")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

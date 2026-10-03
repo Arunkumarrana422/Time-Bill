@@ -92,9 +92,7 @@ fun TimerScreen(
     val rate = customRate.toDoubleOrNull() ?: selectedService?.hourlyRate ?: 500.0
     val billableSeconds = maxOf(0L, currentElapsedSeconds - breakSeconds)
     val billableHours = billableSeconds / 3600.0
-    val calculatedAmount = billableHours * rate
-    val minCharge = selectedService?.minimumCharge ?: 0.0
-    val currentAmount = maxOf(calculatedAmount, if (billableSeconds > 0) minCharge else 0.0)
+    val currentAmount = billableHours * rate
 
     val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
@@ -531,8 +529,7 @@ fun TimerScreen(
                                         serviceId = "srv_${System.currentTimeMillis()}",
                                         userId = currentUserId,
                                         name = newServiceName.trim(),
-                                        hourlyRate = sRate,
-                                        minimumCharge = sRate / 2
+                                        hourlyRate = sRate
                                     )
                                     repository.saveService(newSrv)
                                     selectedService = newSrv
