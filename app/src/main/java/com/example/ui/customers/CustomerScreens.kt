@@ -230,7 +230,7 @@ fun CustomerCard(customer: Customer, onClick: () -> Unit) {
                     }
                     IconButton(
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=${customer.mobile}&text=Hello%20${customer.name},%20you%20have%20a%20pending%20balance%20of%20₹${customer.pendingAmount}%20for%20Time%20Bill%20services."))
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=${customer.mobile}&text=Hello%20${customer.name},%20you%20have%20a%20pending%20balance%20of%20₹${customer.pendingAmount.toInt()}%20for%20Time%20Bill%20services."))
                             context.startActivity(intent)
                         },
                         modifier = Modifier.size(36.dp)
@@ -249,8 +249,8 @@ fun CustomerCard(customer: Customer, onClick: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Total Jobs: ${customer.totalJobs}", style = MaterialTheme.typography.bodySmall)
-                Text("Total: ₹${customer.totalAmount}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
-                Text("Pending: ₹${customer.pendingAmount}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = if (customer.pendingAmount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                Text("Total: ₹${customer.totalAmount.toInt()}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                Text("Pending: ₹${customer.pendingAmount.toInt()}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = if (customer.pendingAmount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
             }
         }
     }

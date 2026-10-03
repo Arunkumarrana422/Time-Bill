@@ -1,5 +1,6 @@
 package com.example.ui.services
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -7,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,6 +34,13 @@ fun ServiceListScreen(
     var description by remember { mutableStateOf("") }
     var hourlyRate by remember { mutableStateOf("500") }
     var minCharge by remember { mutableStateOf("100") }
+
+    // Edit service state
+    var editingService by remember { mutableStateOf<ServiceItem?>(null) }
+    var editName by remember { mutableStateOf("") }
+    var editDescription by remember { mutableStateOf("") }
+    var editHourlyRate by remember { mutableStateOf("") }
+    var editMinCharge by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
 
@@ -66,7 +75,15 @@ fun ServiceListScreen(
         ) {
             items(servicesState.value) { service ->
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            editingService = service
+                            editName = service.name
+                            editDescription = service.description
+                            editHourlyRate = service.hourlyRate.toInt().toString()
+                            editMinCharge = service.minimumCharge.toInt().toString()
+                        },
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
@@ -81,9 +98,12 @@ fun ServiceListScreen(
                                 Text(service.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("₹${service.hourlyRate}/hr", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
-                            Text("Min: ₹${service.minimumCharge}", style = MaterialTheme.typography.bodySmall)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("₹${service.hourlyRate.toInt()}/hr", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                                Text("Min: ₹${service.minimumCharge.toInt()}", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
@@ -131,6 +151,48 @@ fun ServiceListScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showAddDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (editingService != null) {
+            AlertDialog(
+                onDismissRequest = { editingService = null },
+                title = { Text("Edit Service & Price") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = editName, onValueChange = { editName = it }, label = { Text("Service Name *") }, singleLine = true)
+                        OutlinedTextField(value = editDescription, onValueChange = { editDescription = it }, label = { Text("Description") }, singleLine = true)
+                        OutlinedTextField(value = editHourlyRate, onValueChange = { editHourlyRate = it }, label = { Text("Hourly Rate (₹) *") }, singleLine = true)
+                        OutlinedTextField(value = editMinCharge, onValueChange = { editMinCharge = it }, label = { Text("Minimum Charge (₹)") }, singleLine = true)
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (editName.isBlank()) return@Button
+                            val hr = editHourlyRate.toDoubleOrNull() ?: editingService!!.hourlyRate
+                            val min = editMinCharge.toDoubleOrNull() ?: editingService!!.minimumCharge
+                            val updated = editingService!!.copy(
+                                name = editName.trim(),
+                                description = editDescription.trim(),
+                                hourlyRate = hr,
+                                minuteRate = hr / 60.0,
+                                minimumCharge = min
+                            )
+                            scope.launch {
+                                repository.saveService(updated)
+                                editingService = null
+                            }
+                        }
+                    ) {
+                        Text("Update Service")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { editingService = null }) {
                         Text("Cancel")
                     }
                 }

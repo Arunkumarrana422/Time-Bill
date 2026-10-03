@@ -30,6 +30,7 @@ fun TimerScreen(
 ) {
     val customersState = repository.observeCustomers(currentUserId).collectAsState(initial = emptyList())
     val servicesState = repository.observeServices(currentUserId).collectAsState(initial = emptyList())
+    val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
 
     var selectedCustomer by remember { mutableStateOf<Customer?>(null) }
     var selectedService by remember { mutableStateOf<ServiceItem?>(null) }
@@ -83,7 +84,7 @@ fun TimerScreen(
                 breakSeconds += 1
             } else {
                 delay(1000L)
-                currentElapsedSeconds = accumulatedSeconds + ((System.currentTimeMillis() - startTimeMs) / 1000)
+                currentElapsedSeconds += 1
             }
         }
     }
@@ -334,7 +335,7 @@ fun TimerScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = "Current Amount: ₹${String.format(Locale.getDefault(), "%.2f", currentAmount)}",
+                            text = "Current Amount: ₹${currentAmount.toInt()}",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.secondary
@@ -590,34 +591,52 @@ fun TimerScreen(
                             val billableMin = maxOf(1, totalMin - breakMin)
 
                             scope.launch {
-                                val jobId = "job_${System.currentTimeMillis()}"
-                                val job = Job(
-                                    jobId = jobId,
-                                    userId = currentUserId,
-                                    customerId = selectedCustomer?.customerId ?: "cust_unknown",
-                                    customerName = selectedCustomer?.name ?: "Unknown",
-                                    serviceId = selectedService?.serviceId ?: "srv_unknown",
-                                    serviceName = selectedService?.name ?: "Service",
-                                    date = currentDate,
-                                    startTime = startTimeFormatted,
-                                    endTime = timeFormat.format(Date()),
-                                    totalDurationMinutes = totalMin,
-                                    breakDurationMinutes = breakMin,
-                                    billableDurationMinutes = billableMin,
-                                    rate = finalRate,
-                                    baseAmount = finalAmt,
-                                    finalAmount = finalAmt,
-                                    pendingAmount = finalAmt,
-                                    paymentStatus = "Pending",
-                                    status = "Completed",
-                                    notes = notes
-                                )
+                                val existingJob = jobsState.value.find { 
+                                    it.customerId == (selectedCustomer?.customerId ?: "") && 
+                                    it.serviceId == (selectedService?.serviceId ?: "") && 
+                                    it.date == currentDate 
+                                }
+
+                                val job = if (existingJob != null) {
+                                    existingJob.copy(
+                                        totalDurationMinutes = existingJob.totalDurationMinutes + totalMin,
+                                        breakDurationMinutes = existingJob.breakDurationMinutes + breakMin,
+                                        billableDurationMinutes = existingJob.billableDurationMinutes + billableMin,
+                                        baseAmount = existingJob.baseAmount + finalAmt,
+                                        finalAmount = existingJob.finalAmount + finalAmt,
+                                        pendingAmount = existingJob.pendingAmount + finalAmt,
+                                        endTime = timeFormat.format(Date()),
+                                        notes = if (notes.isBlank()) existingJob.notes else if (existingJob.notes.isBlank()) notes else "${existingJob.notes}, $notes"
+                                    )
+                                } else {
+                                    Job(
+                                        jobId = "job_${System.currentTimeMillis()}",
+                                        userId = currentUserId,
+                                        customerId = selectedCustomer?.customerId ?: "cust_unknown",
+                                        customerName = selectedCustomer?.name ?: "Unknown",
+                                        serviceId = selectedService?.serviceId ?: "srv_unknown",
+                                        serviceName = selectedService?.name ?: "Service",
+                                        date = currentDate,
+                                        startTime = startTimeFormatted,
+                                        endTime = timeFormat.format(Date()),
+                                        totalDurationMinutes = totalMin,
+                                        breakDurationMinutes = breakMin,
+                                        billableDurationMinutes = billableMin,
+                                        rate = finalRate,
+                                        baseAmount = finalAmt,
+                                        finalAmount = finalAmt,
+                                        pendingAmount = finalAmt,
+                                        paymentStatus = "Pending",
+                                        status = "Completed",
+                                        notes = notes
+                                    )
+                                }
                                 repository.saveJob(job)
 
                                 // Update customer totals correctly
                                 selectedCustomer?.let { cust ->
                                     val updatedCust = cust.copy(
-                                        totalJobs = cust.totalJobs + 1,
+                                        totalJobs = if (existingJob == null) cust.totalJobs + 1 else cust.totalJobs,
                                         totalAmount = cust.totalAmount + finalAmt,
                                         pendingAmount = cust.pendingAmount + finalAmt,
                                         updatedAt = System.currentTimeMillis()

@@ -54,10 +54,7 @@ fun TimeBillNavGraph(
     userProfile: UserProfile?,
     onSignOut: () -> Unit
 ) {
-    val startRoute = when {
-        userProfile == null || !userProfile.isSetupComplete -> Screen.Setup.route
-        else -> Screen.Dashboard.route
-    }
+    val startRoute = Screen.Dashboard.route
 
     NavHost(
         navController = navController,

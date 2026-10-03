@@ -22,6 +22,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -92,11 +93,16 @@ class MainActivity : ComponentActivity() {
                             currentUser?.uid?.let { uid ->
                                 scope.launch {
                                     try {
-                                        repository.syncDataFromFirestore(uid)
                                         repository.seedDefaultServicesIfNeeded(uid)
                                         val profile = repository.getUser(uid)
                                         userProfile = profile
-                                        isProfileLoaded = true
+                                        isProfileLoaded = true // Load instantly from local DB
+
+                                        // Sync cloud data in background without blocking UI
+                                        launch(Dispatchers.IO) {
+                                            repository.syncDataFromFirestore(uid)
+                                        }
+
                                         repository.observeUserProfile(uid).collectLatest { p ->
                                             userProfile = p
                                         }

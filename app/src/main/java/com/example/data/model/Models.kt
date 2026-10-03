@@ -16,7 +16,8 @@ data class UserProfile(
     val defaultService: String = "Tractor Ploughing",
     val invoicePrefix: String = "INV",
     val paymentTerms: String = "Due on receipt",
-    val isSetupComplete: Boolean = false
+    val isSetupComplete: Boolean = false,
+    val profilePhotoUri: String = ""
 ) : Serializable
 
 @Entity(tableName = "customers")

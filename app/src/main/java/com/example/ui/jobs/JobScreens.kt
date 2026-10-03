@@ -141,7 +141,7 @@ fun JobCard(job: Job, onClick: () -> Unit) {
                     Text("${job.serviceName} • ${job.date}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("₹${job.finalAmount}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                    Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
                     Surface(
                         shape = RoundedCornerShape(4.dp),
                         color = when (job.paymentStatus) {
@@ -155,7 +155,7 @@ fun JobCard(job: Job, onClick: () -> Unit) {
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Duration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m | Rate: ₹${job.rate}/hr", style = MaterialTheme.typography.bodySmall)
+            Text("Duration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m | Rate: ₹${job.rate.toInt()}/hr", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

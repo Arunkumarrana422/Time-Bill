@@ -97,12 +97,12 @@ fun ReportsScreen(
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Financial Overview", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     Divider()
-                    ReportRow("Total Invoiced Revenue", "₹$totalIncome")
-                    ReportRow("Total Payments Received", "₹$totalReceived")
-                    ReportRow("Total Pending Dues", "₹$totalPending")
-                    ReportRow("Total Business Expenses", "₹$totalExpenses")
+                    ReportRow("Total Invoiced Revenue", "₹${totalIncome.toInt()}")
+                    ReportRow("Total Payments Received", "₹${totalReceived.toInt()}")
+                    ReportRow("Total Pending Dues", "₹${totalPending.toInt()}")
+                    ReportRow("Total Business Expenses", "₹${totalExpenses.toInt()}")
                     Divider()
-                    ReportRow("Net Profit", "₹$netProfit", isBold = true, color = MaterialTheme.colorScheme.primary)
+                    ReportRow("Net Profit", "₹${netProfit.toInt()}", isBold = true, color = MaterialTheme.colorScheme.primary)
                     ReportRow("Total Working Hours", "${totalMinutes / 60}h ${totalMinutes % 60}m")
                     ReportRow("Total Jobs Completed", "${jobsState.value.size}")
                 }

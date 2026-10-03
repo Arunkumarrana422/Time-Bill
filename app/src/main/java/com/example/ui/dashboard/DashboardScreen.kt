@@ -118,7 +118,7 @@ fun DashboardScreen(
                     MetricCard(
                         modifier = Modifier.weight(1f),
                         title = "Today's Earnings",
-                        value = "₹$todayEarnings",
+                        value = "₹${todayEarnings.toInt()}",
                         subtitle = todayHoursFormatted,
                         icon = Icons.Default.TrendingUp,
                         containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -126,7 +126,7 @@ fun DashboardScreen(
                     MetricCard(
                         modifier = Modifier.weight(1f),
                         title = "Pending Payments",
-                        value = "₹$totalPending",
+                        value = "₹${totalPending.toInt()}",
                         subtitle = "${customersState.value.size} customers",
                         icon = Icons.Default.Pending,
                         containerColor = MaterialTheme.colorScheme.errorContainer
@@ -142,7 +142,7 @@ fun DashboardScreen(
                     MetricCard(
                         modifier = Modifier.weight(1f),
                         title = "Month Earnings",
-                        value = "₹$monthEarnings",
+                        value = "₹${monthEarnings.toInt()}",
                         subtitle = "${monthJobs.size} jobs done",
                         icon = Icons.Default.CalendarMonth,
                         containerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -150,7 +150,7 @@ fun DashboardScreen(
                     MetricCard(
                         modifier = Modifier.weight(1f),
                         title = "Total Received",
-                        value = "₹$totalReceived",
+                        value = "₹${totalReceived.toInt()}",
                         subtitle = "${paymentsState.value.size} payments",
                         icon = Icons.Default.CheckCircle,
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer
