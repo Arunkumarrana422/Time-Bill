@@ -1,5 +1,6 @@
 package com.example.ui.timer
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,11 +40,9 @@ fun TimerScreen(
 
     var isTimerStarted by remember { mutableStateOf(false) }
     var isPaused by remember { mutableStateOf(false) }
-    var isOnBreak by remember { mutableStateOf(false) }
 
     var startTimeMs by remember { mutableStateOf(0L) }
     var accumulatedSeconds by remember { mutableStateOf(0L) }
-    var breakSeconds by remember { mutableStateOf(0L) }
     var currentElapsedSeconds by remember { mutableStateOf(0L) }
 
     // Quick Add Dialog States
@@ -77,20 +76,15 @@ fun TimerScreen(
         }
     }
 
-    LaunchedEffect(isTimerStarted, isPaused, isOnBreak) {
+    LaunchedEffect(isTimerStarted, isPaused) {
         while (isTimerStarted && !isPaused) {
-            if (isOnBreak) {
-                delay(1000L)
-                breakSeconds += 1
-            } else {
-                delay(1000L)
-                currentElapsedSeconds += 1
-            }
+            delay(1000L)
+            currentElapsedSeconds += 1
         }
     }
 
     val rate = customRate.toDoubleOrNull() ?: selectedService?.hourlyRate ?: 500.0
-    val billableSeconds = maxOf(0L, currentElapsedSeconds - breakSeconds)
+    val billableSeconds = currentElapsedSeconds
     val billableHours = billableSeconds / 3600.0
     val currentAmount = billableHours * rate
 
@@ -359,49 +353,28 @@ fun TimerScreen(
                         ) {
                             Text("Start: $startTimeFormatted")
                             Text("Rate: ₹$rate/hr")
-                            if (breakSeconds > 0) {
-                                Text("Break: ${breakSeconds / 60}m")
-                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                Button(
+                    onClick = {
+                        isPaused = !isPaused
+                        if (!isPaused) {
+                            startTimeMs = System.currentTimeMillis()
+                        } else {
+                            accumulatedSeconds = currentElapsedSeconds
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
-                    Button(
-                        onClick = {
-                            isPaused = !isPaused
-                            if (!isPaused) {
-                                startTimeMs = System.currentTimeMillis()
-                            } else {
-                                accumulatedSeconds = currentElapsedSeconds
-                            }
-                        },
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                    ) {
-                        Icon(if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isPaused) "Resume" else "Pause")
-                    }
-
-                    Button(
-                        onClick = {
-                            isOnBreak = !isOnBreak
-                        },
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (isOnBreak) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary)
-                    ) {
-                        Icon(Icons.Default.Coffee, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isOnBreak) "End Break" else "Start Break")
-                    }
+                    Icon(if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(if (isPaused) "Resume" else "Pause")
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -584,8 +557,8 @@ fun TimerScreen(
                             val finalRate = editableRate.toDoubleOrNull() ?: rate
                             val finalAmt = editableAmount.toDoubleOrNull() ?: currentAmount
                             val totalMin = (currentElapsedSeconds / 60).toInt()
-                            val breakMin = (breakSeconds / 60).toInt()
-                            val billableMin = maxOf(1, totalMin - breakMin)
+                            val breakMin = 0
+                            val billableMin = maxOf(1, totalMin)
 
                             scope.launch {
                                 val existingJob = jobsState.value.find { 

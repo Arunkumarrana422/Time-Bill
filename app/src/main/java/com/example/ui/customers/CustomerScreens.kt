@@ -32,9 +32,6 @@ fun CustomerListScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    BackHandler {
-        onNavigate(Screen.Dashboard.route)
-    }
     val customersState = repository.observeCustomers(currentUserId).collectAsState(initial = emptyList())
     var searchQuery by remember { mutableStateOf("") }
     var showAddDialog by remember { mutableStateOf(false) }

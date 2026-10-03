@@ -3,6 +3,7 @@ package com.example.ui.dashboard
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import com.example.data.model.Job
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.navigation.Screen
@@ -70,6 +72,12 @@ fun DashboardScreen(
 
     val totalPending = jobsState.value.sumOf { it.pendingAmount }
     val totalReceived = paymentsState.value.sumOf { it.amount }
+
+    var isLoading by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        delay(600)
+        isLoading = false
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -326,6 +334,20 @@ fun DashboardScreen(
                         fontWeight = FontWeight.Medium
                     )
                 }
+            }
+        }
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 4.dp
+                )
             }
         }
     }

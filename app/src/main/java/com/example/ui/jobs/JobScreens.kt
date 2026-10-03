@@ -34,9 +34,6 @@ fun JobListScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    BackHandler {
-        onNavigate(Screen.Dashboard.route)
-    }
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
     var filterStatus by remember { mutableStateOf("All") }
 
@@ -177,7 +174,7 @@ fun JobDetailScreen(
     val job = jobsState.value.find { h -> h.jobId == jobId }
 
     var showPaymentDialog by remember { mutableStateOf(false) }
-    var paymentAmount by remember { mutableStateOf(job?.pendingAmount?.toString() ?: "0") }
+    var paymentAmount by remember { mutableStateOf(job?.pendingAmount?.toInt()?.toString() ?: "0") }
     var paymentMethod by remember { mutableStateOf("Cash") }
 
     val scope = rememberCoroutineScope()
@@ -200,7 +197,7 @@ fun JobDetailScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        val shareText = "🚜 *TIME BILL INVOICE*\nCustomer: ${job.customerName}\nService: ${job.serviceName}\nDate: ${job.date}\nDuration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m\nAmount: *₹${job.finalAmount}*\nStatus: *${job.paymentStatus}*\nThank you for your business!"
+                        val shareText = "🚜 *TIME BILL INVOICE*\nCustomer: ${job.customerName}\nService: ${job.serviceName}\nDate: ${job.date}\nDuration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m\nAmount: *₹${job.finalAmount.toInt()}*\nStatus: *${job.paymentStatus}*\nThank you for your business!"
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT, shareText)
@@ -246,22 +243,22 @@ fun JobDetailScreen(
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Hourly Rate:", fontWeight = FontWeight.Medium)
-                            Text("₹${job.rate}/hr")
+                            Text("₹${job.rate.toInt()}/hr")
                         }
 
                         Divider()
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Grand Total:", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text("₹${job.finalAmount}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                            Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Paid Amount:", fontWeight = FontWeight.Medium)
-                            Text("₹${job.paidAmount}", color = MaterialTheme.colorScheme.secondary)
+                            Text("₹${job.paidAmount.toInt()}", color = MaterialTheme.colorScheme.secondary)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Pending Due:", fontWeight = FontWeight.Medium)
-                            Text("₹${job.pendingAmount}", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                            Text("₹${job.pendingAmount.toInt()}", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                         }
 
                         if (job.pendingAmount > 0) {

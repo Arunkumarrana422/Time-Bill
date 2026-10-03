@@ -1,5 +1,8 @@
 package com.example.ui.timer
 
+import android.app.DatePickerDialog
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -7,11 +10,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,6 +34,7 @@ fun ManualJobScreen(
     repository: TimeBillRepository,
     onFinish: () -> Unit
 ) {
+    val context = LocalContext.current
     val customersState = repository.observeCustomers(currentUserId).collectAsState(initial = emptyList())
     val servicesState = repository.observeServices(currentUserId).collectAsState(initial = emptyList())
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
@@ -36,13 +42,22 @@ fun ManualJobScreen(
     var selectedCustomer by remember { mutableStateOf<Customer?>(null) }
     var selectedService by remember { mutableStateOf<ServiceItem?>(null) }
     var date by remember { mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())) }
-    var hours by remember { mutableStateOf("2") }
-    var minutes by remember { mutableStateOf("30") }
-    var breakMinutes by remember { mutableStateOf("0") }
+    var hours by remember { mutableStateOf("") }
+    var minutes by remember { mutableStateOf("") }
     var rate by remember { mutableStateOf("500") }
     var additionalCharges by remember { mutableStateOf("0") }
-    var discount by remember { mutableStateOf("0") }
     var notes by remember { mutableStateOf("") }
+
+    val calendar = Calendar.getInstance()
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            date = String.format(Locale.getDefault(), "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
 
     // Quick Add Dialog States
     var showAddCustomerDialog by remember { mutableStateOf(false) }
@@ -73,13 +88,10 @@ fun ManualJobScreen(
     val hrs = hours.toDoubleOrNull() ?: 0.0
     val mins = minutes.toDoubleOrNull() ?: 0.0
     val totalMin = (hrs * 60 + mins).toInt()
-    val breakMin = breakMinutes.toIntOrNull() ?: 0
-    val billableMin = maxOf(0, totalMin - breakMin)
     val hourlyRate = rate.toDoubleOrNull() ?: 500.0
-    val baseAmt = (billableMin / 60.0) * hourlyRate
+    val baseAmt = (totalMin / 60.0) * hourlyRate
     val addl = additionalCharges.toDoubleOrNull() ?: 0.0
-    val disc = discount.toDoubleOrNull() ?: 0.0
-    val finalAmt = maxOf(0.0, baseAmt + addl - disc)
+    val finalAmt = maxOf(0.0, baseAmt + addl)
 
     Scaffold(
         topBar = {
@@ -238,14 +250,25 @@ fun ManualJobScreen(
                         }
                     }
 
-                    OutlinedTextField(
-                        value = date,
-                        onValueChange = { date = it },
-                        label = { Text("Date (YYYY-MM-DD)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    Box(modifier = Modifier.fillMaxWidth().clickable { datePickerDialog.show() }) {
+                        OutlinedTextField(
+                            value = date,
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = false,
+                            label = { Text("Date (YYYY-MM-DD)") },
+                            trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Pick Date") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(
@@ -260,14 +283,6 @@ fun ManualJobScreen(
                             value = minutes,
                             onValueChange = { minutes = it },
                             label = { Text("Minutes") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        OutlinedTextField(
-                            value = breakMinutes,
-                            onValueChange = { breakMinutes = it },
-                            label = { Text("Break (Mins)") },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp)
@@ -294,15 +309,6 @@ fun ManualJobScreen(
                     }
 
                     OutlinedTextField(
-                        value = discount,
-                        onValueChange = { discount = it },
-                        label = { Text("Discount (₹)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    OutlinedTextField(
                         value = notes,
                         onValueChange = { notes = it },
                         label = { Text("Notes / Description") },
@@ -317,7 +323,7 @@ fun ManualJobScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Billable Time:", fontWeight = FontWeight.Medium)
-                        Text("${billableMin / 60}h ${billableMin % 60}m", fontWeight = FontWeight.Bold)
+                        Text("${totalMin / 60}h ${totalMin % 60}m", fontWeight = FontWeight.Bold)
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -342,11 +348,11 @@ fun ManualJobScreen(
                                 val job = if (existingJob != null) {
                                     existingJob.copy(
                                         totalDurationMinutes = existingJob.totalDurationMinutes + totalMin,
-                                        breakDurationMinutes = existingJob.breakDurationMinutes + breakMin,
-                                        billableDurationMinutes = existingJob.billableDurationMinutes + billableMin,
+                                        breakDurationMinutes = 0,
+                                        billableDurationMinutes = existingJob.billableDurationMinutes + totalMin,
                                         baseAmount = existingJob.baseAmount + baseAmt,
                                         additionalChargesAmount = existingJob.additionalChargesAmount + addl,
-                                        discountAmount = existingJob.discountAmount + disc,
+                                        discountAmount = 0.0,
                                         finalAmount = existingJob.finalAmount + finalAmt,
                                         pendingAmount = existingJob.pendingAmount + finalAmt,
                                         notes = if (notes.isBlank()) existingJob.notes else if (existingJob.notes.isBlank()) notes else "${existingJob.notes}, $notes"
@@ -363,12 +369,12 @@ fun ManualJobScreen(
                                         startTime = "08:00 AM",
                                         endTime = "05:00 PM",
                                         totalDurationMinutes = totalMin,
-                                        breakDurationMinutes = breakMin,
-                                        billableDurationMinutes = billableMin,
+                                        breakDurationMinutes = 0,
+                                        billableDurationMinutes = totalMin,
                                         rate = hourlyRate,
                                         baseAmount = baseAmt,
                                         additionalChargesAmount = addl,
-                                        discountAmount = disc,
+                                        discountAmount = 0.0,
                                         finalAmount = finalAmt,
                                         pendingAmount = finalAmt,
                                         paymentStatus = "Pending",

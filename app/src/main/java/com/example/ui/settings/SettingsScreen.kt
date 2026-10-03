@@ -42,21 +42,20 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
     onBack: () -> Unit
 ) {
-    BackHandler {
-        onNavigate(Screen.Dashboard.route)
-    }
     val auth = Firebase.auth
     val scope = rememberCoroutineScope()
     val userProfileState = repository.observeUserProfile(currentUserId).collectAsState(initial = null)
     val userProfile = userProfileState.value
 
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var isPhotoLoading by remember { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         uri?.let {
             scope.launch {
+                isPhotoLoading = true
                 val current = userProfile ?: UserProfile(userId = currentUserId)
                 val updatedProfile = current.copy(profilePhotoUri = it.toString())
                 repository.saveUserProfile(updatedProfile)
@@ -132,12 +131,10 @@ fun SettingsScreen(
                 ) {
                     Text("User Profile", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.align(Alignment.Start))
 
-                    // Profile Photo Circle
+                    // Profile Photo Circle with bottom-right camera badge and center loading spinner
                     Box(
                         modifier = Modifier
                             .size(100.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
                             .clickable {
                                 photoPickerLauncher.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -145,35 +142,57 @@ fun SettingsScreen(
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        val hasPhoto = !userProfile?.profilePhotoUri.isNullOrEmpty()
-                        if (hasPhoto) {
-                            AsyncImage(
-                                model = userProfile?.profilePhotoUri,
-                                contentDescription = "Profile Photo",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Profile Icon",
-                                modifier = Modifier.size(50.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            // Camera icon with fading when no photo uploaded
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Black.copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val hasPhoto = !userProfile?.profilePhotoUri.isNullOrEmpty()
+                            if (hasPhoto) {
+                                AsyncImage(
+                                    model = userProfile?.profilePhotoUri,
+                                    contentDescription = "Profile Photo",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                    onLoading = { isPhotoLoading = true },
+                                    onSuccess = { isPhotoLoading = false },
+                                    onError = { isPhotoLoading = false }
+                                )
+                            } else {
                                 Icon(
-                                    imageVector = Icons.Default.CameraAlt,
-                                    contentDescription = "Upload Photo",
-                                    modifier = Modifier.size(28.dp),
-                                    tint = Color.White.copy(alpha = 0.85f)
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "Profile Icon",
+                                    modifier = Modifier.size(50.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
+
+                            if (isPhotoLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    strokeWidth = 3.dp
+                                )
+                            }
+                        }
+
+                        // Bottom-Right Camera Icon Badge
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "Change Photo",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
                         }
                     }
 

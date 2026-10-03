@@ -24,9 +24,6 @@ fun ReportsScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    BackHandler {
-        onNavigate(Screen.Dashboard.route)
-    }
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
     val paymentsState = repository.observePayments(currentUserId).collectAsState(initial = emptyList())
     val expensesState = repository.observeExpenses(currentUserId).collectAsState(initial = emptyList())

@@ -1,7 +1,9 @@
 package com.example.ui.auth
 
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -74,14 +76,15 @@ fun AuthScreen(
         }
     }
 
-    Surface(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .clearFocusOnTap(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .clearFocusOnTap(),
+            color = MaterialTheme.colorScheme.background
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -471,6 +474,7 @@ fun AuthScreen(
                             }
                         }
                     }
+                }
                 }
             }
         }

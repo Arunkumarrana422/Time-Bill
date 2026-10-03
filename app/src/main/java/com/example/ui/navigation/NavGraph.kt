@@ -85,13 +85,7 @@ fun TimeBillNavGraph(
             DashboardScreen(
                 currentUserId = currentUserId,
                 repository = repository,
-                onNavigate = { route ->
-                    navController.navigate(route) {
-                        popUpTo(Screen.Dashboard.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
+                onNavigate = { route -> navController.navigate(route) }
             )
         }
         composable(Screen.Timer.route) {
@@ -112,18 +106,8 @@ fun TimeBillNavGraph(
             CustomerListScreen(
                 currentUserId = currentUserId,
                 repository = repository,
-                onNavigate = { route ->
-                    navController.navigate(route) {
-                        popUpTo(Screen.Dashboard.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                onBack = {
-                    navController.navigate(Screen.Dashboard.route) {
-                        popUpTo(Screen.Dashboard.route) { inclusive = true }
-                    }
-                }
+                onNavigate = { route -> navController.navigate(route) },
+                onBack = { navController.popBackStack() }
             )
         }
         composable(Screen.CustomerDetail.route) { backStackEntry ->
@@ -146,18 +130,8 @@ fun TimeBillNavGraph(
             JobListScreen(
                 currentUserId = currentUserId,
                 repository = repository,
-                onNavigate = { route ->
-                    navController.navigate(route) {
-                        popUpTo(Screen.Dashboard.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                onBack = {
-                    navController.navigate(Screen.Dashboard.route) {
-                        popUpTo(Screen.Dashboard.route) { inclusive = true }
-                    }
-                }
+                onNavigate = { route -> navController.navigate(route) },
+                onBack = { navController.popBackStack() }
             )
         }
         composable(Screen.JobDetail.route) { backStackEntry ->
@@ -187,18 +161,8 @@ fun TimeBillNavGraph(
             ReportsScreen(
                 currentUserId = currentUserId,
                 repository = repository,
-                onNavigate = { route ->
-                    navController.navigate(route) {
-                        popUpTo(Screen.Dashboard.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                onBack = {
-                    navController.navigate(Screen.Dashboard.route) {
-                        popUpTo(Screen.Dashboard.route) { inclusive = true }
-                    }
-                }
+                onNavigate = { route -> navController.navigate(route) },
+                onBack = { navController.popBackStack() }
             )
         }
         composable(Screen.Calendar.route) {
@@ -212,19 +176,9 @@ fun TimeBillNavGraph(
             SettingsScreen(
                 currentUserId = currentUserId,
                 repository = repository,
-                onNavigate = { route ->
-                    navController.navigate(route) {
-                        popUpTo(Screen.Dashboard.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
+                onNavigate = { route -> navController.navigate(route) },
                 onSignOut = onSignOut,
-                onBack = {
-                    navController.navigate(Screen.Dashboard.route) {
-                        popUpTo(Screen.Dashboard.route) { inclusive = true }
-                    }
-                }
+                onBack = { navController.popBackStack() }
             )
         }
     }
