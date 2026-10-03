@@ -1,5 +1,6 @@
 package com.example.ui.auth
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -25,8 +26,8 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.UserProfile
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.util.clearFocusOnTap
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
+import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -52,11 +53,19 @@ fun AuthScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
 
-    val auth = remember {
-        try {
-            Firebase.auth
+    fun getFirebaseAuth(): FirebaseAuth? {
+        return try {
+            FirebaseAuth.getInstance()
         } catch (e: Exception) {
-            null
+            try {
+                if (FirebaseApp.getApps(context).isEmpty()) {
+                    FirebaseApp.initializeApp(context)
+                }
+                FirebaseAuth.getInstance()
+            } catch (e2: Exception) {
+                Log.e("AuthScreen", "Firebase init error", e2)
+                null
+            }
         }
     }
 
@@ -287,8 +296,9 @@ fun AuthScreen(
                     // Main Action Button
                     Button(
                         onClick = {
-                            if (auth == null) {
-                                errorMessage = "Authentication service is currently unavailable."
+                            val fAuth = getFirebaseAuth()
+                            if (fAuth == null) {
+                                errorMessage = "Unable to connect to Authentication service. Please check internet connection."
                                 return@Button
                             }
                             if (email.isBlank()) {
@@ -304,7 +314,7 @@ fun AuthScreen(
                             scope.launch {
                                 try {
                                     if (isForgotPassword) {
-                                        auth.sendPasswordResetEmail(email.trim()).await()
+                                        fAuth.sendPasswordResetEmail(email.trim()).await()
                                         successMessage = "Password reset link sent to $email."
                                     } else if (isRegisterMode) {
                                         if (password != confirmPassword) {
@@ -317,7 +327,7 @@ fun AuthScreen(
                                             isLoading = false
                                             return@launch
                                         }
-                                        val result = auth.createUserWithEmailAndPassword(email.trim(), password).await()
+                                        val result = fAuth.createUserWithEmailAndPassword(email.trim(), password).await()
                                         val uid = result.user?.uid
                                         if (uid != null && repository != null) {
                                             val profile = UserProfile(
@@ -331,17 +341,30 @@ fun AuthScreen(
                                         }
                                         onAuthSuccess()
                                     } else {
-                                        auth.signInWithEmailAndPassword(email.trim(), password).await()
+                                        fAuth.signInWithEmailAndPassword(email.trim(), password).await()
                                         onAuthSuccess()
                                     }
                                 } catch (e: Exception) {
                                     val msg = e.localizedMessage ?: ""
+                                    Log.e("AuthScreen", "Auth error: $msg", e)
                                     errorMessage = when {
-                                        msg.contains("already in use", ignoreCase = true) -> "This email is already registered. Please sign in."
-                                        msg.contains("no user record", ignoreCase = true) || msg.contains("user-not-found", ignoreCase = true) -> "No account found with this email. Please create an account."
-                                        msg.contains("password", ignoreCase = true) && (msg.contains("weak", ignoreCase = true) || msg.contains("characters", ignoreCase = true)) -> "Password must be at least 6 characters."
-                                        msg.contains("credential", ignoreCase = true) || msg.contains("invalid-credential", ignoreCase = true) || msg.contains("password is invalid", ignoreCase = true) -> "Invalid email or password."
-                                        else -> msg.ifBlank { "Authentication failed. Please check details." }
+                                        msg.contains("already in use", ignoreCase = true) || msg.contains("EMAIL_EXISTS", ignoreCase = true) -> 
+                                            "This email is already registered. Please sign in or reset password."
+                                        msg.contains("badly formatted", ignoreCase = true) || msg.contains("invalid-email", ignoreCase = true) ->
+                                            "Please enter a valid email address."
+                                        msg.contains("password", ignoreCase = true) && (msg.contains("weak", ignoreCase = true) || msg.contains("characters", ignoreCase = true)) -> 
+                                            "Password must be at least 6 characters."
+                                        msg.contains("credential", ignoreCase = true) || 
+                                        msg.contains("invalid-credential", ignoreCase = true) || 
+                                        msg.contains("INVALID_LOGIN_CREDENTIALS", ignoreCase = true) || 
+                                        msg.contains("wrong-password", ignoreCase = true) ||
+                                        msg.contains("user-not-found", ignoreCase = true) ||
+                                        msg.contains("no user record", ignoreCase = true) ||
+                                        msg.contains("USER_NOT_FOUND", ignoreCase = true) -> 
+                                            "Incorrect your email & password"
+                                        msg.contains("network", ignoreCase = true) -> 
+                                            "Network error. Please check your internet connection and try again."
+                                        else -> msg.ifBlank { "Incorrect your email & password" }
                                     }
                                 } finally {
                                     isLoading = false
