@@ -5,7 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -13,12 +13,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.repository.TimeBillRepository
+import com.example.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportsScreen(
     currentUserId: String,
     repository: TimeBillRepository,
+    onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
@@ -43,6 +45,40 @@ fun ReportsScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             )
+        },
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                    label = { Text("Home") },
+                    selected = false,
+                    onClick = { onNavigate(Screen.Dashboard.route) }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Work, contentDescription = null) },
+                    label = { Text("Jobs") },
+                    selected = false,
+                    onClick = { onNavigate(Screen.Jobs.route) }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.People, contentDescription = null) },
+                    label = { Text("Customers") },
+                    selected = false,
+                    onClick = { onNavigate(Screen.Customers.route) }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
+                    label = { Text("Reports") },
+                    selected = true,
+                    onClick = {}
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    label = { Text("Settings") },
+                    selected = false,
+                    onClick = { onNavigate(Screen.Settings.route) }
+                )
+            }
         }
     ) { padding ->
         Column(

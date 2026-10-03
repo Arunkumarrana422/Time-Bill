@@ -164,6 +164,7 @@ fun TimeBillNavGraph(
             ReportsScreen(
                 currentUserId = currentUserId,
                 repository = repository,
+                onNavigate = { route -> navController.navigate(route) },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -178,6 +179,7 @@ fun TimeBillNavGraph(
             SettingsScreen(
                 currentUserId = currentUserId,
                 repository = repository,
+                onNavigate = { route -> navController.navigate(route) },
                 onSignOut = onSignOut,
                 onBack = { navController.popBackStack() }
             )

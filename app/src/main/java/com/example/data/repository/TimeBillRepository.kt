@@ -32,6 +32,12 @@ class TimeBillRepository(private val context: Context) {
     // User Profile
     fun observeUserProfile(userId: String): Flow<UserProfile?> = appDb.userDao().observeUser(userId)
 
+    suspend fun getUser(userId: String): UserProfile? {
+        return withContext(Dispatchers.IO) {
+            appDb.userDao().getUser(userId)
+        }
+    }
+
     suspend fun saveUserProfile(profile: UserProfile) {
         withContext(Dispatchers.IO) {
             appDb.userDao().insertUser(profile)

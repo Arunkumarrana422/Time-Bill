@@ -61,6 +61,40 @@ fun CustomerListScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             )
         },
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                    label = { Text("Home") },
+                    selected = false,
+                    onClick = { onNavigate(Screen.Dashboard.route) }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Work, contentDescription = null) },
+                    label = { Text("Jobs") },
+                    selected = false,
+                    onClick = { onNavigate(Screen.Jobs.route) }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.People, contentDescription = null) },
+                    label = { Text("Customers") },
+                    selected = true,
+                    onClick = {}
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
+                    label = { Text("Reports") },
+                    selected = false,
+                    onClick = { onNavigate(Screen.Reports.route) }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    label = { Text("Settings") },
+                    selected = false,
+                    onClick = { onNavigate(Screen.Settings.route) }
+                )
+            }
+        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
@@ -125,15 +159,21 @@ fun CustomerListScreen(
                         onClick = {
                             if (name.isBlank() || mobile.isBlank()) return@Button
                             scope.launch {
-                                val customerId = "cust_${System.currentTimeMillis()}"
-                                val customer = Customer(
-                                    customerId = customerId,
+                                val existing = customersState.value.find { it.name.trim().equals(name.trim(), ignoreCase = true) }
+                                val customer = existing?.copy(
+                                    mobile = mobile.trim(),
+                                    address = address.trim(),
+                                    village = village.trim(),
+                                    notes = notes.trim(),
+                                    updatedAt = System.currentTimeMillis()
+                                ) ?: Customer(
+                                    customerId = "cust_${System.currentTimeMillis()}",
                                     userId = currentUserId,
-                                    name = name,
-                                    mobile = mobile,
-                                    address = address,
-                                    village = village,
-                                    notes = notes
+                                    name = name.trim(),
+                                    mobile = mobile.trim(),
+                                    address = address.trim(),
+                                    village = village.trim(),
+                                    notes = notes.trim()
                                 )
                                 repository.saveCustomer(customer)
                                 name = ""

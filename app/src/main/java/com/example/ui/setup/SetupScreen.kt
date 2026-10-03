@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,6 +15,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.UserProfile
 import com.example.ui.util.clearFocusOnTap
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 
 @Composable
 fun SetupScreen(
@@ -20,11 +24,29 @@ fun SetupScreen(
     initialProfile: UserProfile?,
     onSaveComplete: (UserProfile) -> Unit
 ) {
-    var name by remember { mutableStateOf(initialProfile?.name ?: "") }
-    var businessName by remember { mutableStateOf(initialProfile?.businessName ?: "") }
-    var mobile by remember { mutableStateOf(initialProfile?.mobile ?: "") }
-    var address by remember { mutableStateOf(initialProfile?.address ?: "") }
-    var currency by remember { mutableStateOf(initialProfile?.currency ?: "₹") }
+    val firebaseUser = try { Firebase.auth.currentUser } catch (e: Exception) { null }
+
+    var name by remember(initialProfile, firebaseUser) { 
+        mutableStateOf(
+            initialProfile?.name?.takeIf { !it.isBlank() } 
+                ?: firebaseUser?.displayName?.takeIf { !it.isBlank() } 
+                ?: ""
+        ) 
+    }
+    var businessName by remember(initialProfile) { 
+        mutableStateOf(
+            initialProfile?.businessName?.takeIf { !it.isBlank() } ?: ""
+        ) 
+    }
+    var mobile by remember(initialProfile, firebaseUser) { 
+        mutableStateOf(
+            initialProfile?.mobile?.takeIf { !it.isBlank() } 
+                ?: firebaseUser?.phoneNumber?.takeIf { !it.isBlank() } 
+                ?: ""
+        ) 
+    }
+    var address by remember(initialProfile) { mutableStateOf(initialProfile?.address ?: "") }
+    var currency by remember(initialProfile) { mutableStateOf(initialProfile?.currency ?: "₹") }
     var defaultRate by remember { mutableStateOf(initialProfile?.defaultRate?.toString() ?: "500") }
     var defaultService by remember { mutableStateOf(initialProfile?.defaultService ?: "Tractor Ploughing") }
     var invoicePrefix by remember { mutableStateOf(initialProfile?.invoicePrefix ?: "INV") }
@@ -45,12 +67,24 @@ fun SetupScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "⚙️ Business Setup Wizard",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Business Setup Wizard",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Configure your profile and billing defaults",
@@ -63,7 +97,8 @@ fun SetupScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp)
@@ -73,7 +108,8 @@ fun SetupScreen(
                         onValueChange = { name = it },
                         label = { Text("Owner / User Name *") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -82,7 +118,8 @@ fun SetupScreen(
                         onValueChange = { businessName = it },
                         label = { Text("Business Name *") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -91,7 +128,8 @@ fun SetupScreen(
                         onValueChange = { mobile = it },
                         label = { Text("Mobile Number *") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -100,7 +138,8 @@ fun SetupScreen(
                         onValueChange = { address = it },
                         label = { Text("Address / Village / Location") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -113,14 +152,16 @@ fun SetupScreen(
                             onValueChange = { currency = it },
                             label = { Text("Currency") },
                             modifier = Modifier.weight(1f),
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
                         OutlinedTextField(
                             value = defaultRate,
                             onValueChange = { defaultRate = it },
                             label = { Text("Default Hourly Rate") },
                             modifier = Modifier.weight(2f),
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
@@ -130,7 +171,8 @@ fun SetupScreen(
                         onValueChange = { defaultService = it },
                         label = { Text("Default Service") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -143,14 +185,16 @@ fun SetupScreen(
                             onValueChange = { invoicePrefix = it },
                             label = { Text("Invoice Prefix") },
                             modifier = Modifier.weight(1f),
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
                         OutlinedTextField(
                             value = paymentTerms,
                             onValueChange = { paymentTerms = it },
                             label = { Text("Payment Terms") },
                             modifier = Modifier.weight(2f),
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
                     }
 

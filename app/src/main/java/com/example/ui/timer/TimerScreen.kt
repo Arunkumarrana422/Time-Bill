@@ -462,7 +462,12 @@ fun TimerScreen(
                         onClick = {
                             if (newCustomerName.isNotBlank()) {
                                 scope.launch {
-                                    val newCust = Customer(
+                                    val existing = customersState.value.find { it.name.trim().equals(newCustomerName.trim(), ignoreCase = true) }
+                                    val newCust = existing?.copy(
+                                        mobile = if (newCustomerMobile.isNotBlank()) newCustomerMobile.trim() else existing.mobile,
+                                        village = if (newCustomerVillage.isNotBlank()) newCustomerVillage.trim() else existing.village,
+                                        updatedAt = System.currentTimeMillis()
+                                    ) ?: Customer(
                                         customerId = "cust_${System.currentTimeMillis()}",
                                         userId = currentUserId,
                                         name = newCustomerName.trim(),

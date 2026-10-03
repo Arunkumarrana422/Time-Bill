@@ -14,6 +14,7 @@ import com.example.data.repository.TimeBillRepository
 import com.example.data.model.UserProfile
 import com.example.ui.auth.AuthScreen
 import com.example.ui.navigation.TimeBillNavGraph
+import com.example.ui.splash.SplashScreen
 import com.example.ui.util.clearFocusOnTap
 import com.example.ui.theme.TimeBillTheme
 import com.google.firebase.Firebase
@@ -53,6 +54,7 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .clearFocusOnTap()
                 ) {
+                    var showSplash by remember { mutableStateOf(true) }
                     var currentUser by remember {
                         mutableStateOf(
                             try {
@@ -66,6 +68,7 @@ class MainActivity : ComponentActivity() {
                     val scope = rememberCoroutineScope()
 
                     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
+                    var isProfileLoaded by remember { mutableStateOf(false) }
 
                     DisposableEffect(Unit) {
                         val auth = try { Firebase.auth } catch (e: Exception) { null }
@@ -83,21 +86,34 @@ class MainActivity : ComponentActivity() {
                     }
 
                     LaunchedEffect(currentUser) {
-                        currentUser?.uid?.let { uid ->
-                            scope.launch {
-                                try {
-                                    repository.seedDefaultServicesIfNeeded(uid)
-                                    repository.observeUserProfile(uid).collectLatest { profile ->
+                        if (currentUser == null) {
+                            userProfile = null
+                            isProfileLoaded = true
+                        } else {
+                            currentUser?.uid?.let { uid ->
+                                scope.launch {
+                                    try {
+                                        repository.seedDefaultServicesIfNeeded(uid)
+                                        val profile = repository.getUser(uid)
                                         userProfile = profile
+                                        isProfileLoaded = true
+                                        repository.observeUserProfile(uid).collectLatest { p ->
+                                            userProfile = p
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("MainActivity", "Data load exception: ${e.message}")
+                                        isProfileLoaded = true
                                     }
-                                } catch (e: Exception) {
-                                    Log.e("MainActivity", "Data load exception: ${e.message}")
                                 }
                             }
                         }
                     }
 
-                    if (currentUser == null) {
+                    if (showSplash || (currentUser != null && !isProfileLoaded)) {
+                        SplashScreen(
+                            onSplashFinished = { showSplash = false }
+                        )
+                    } else if (currentUser == null) {
                         AuthScreen(
                             repository = repository,
                             onAuthSuccess = {
