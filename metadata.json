@@ -1,0 +1,7 @@
+{
+  "name": "Time Bill",
+  "description": "Professional time tracking and billing application for businesses, tractor and farm work.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

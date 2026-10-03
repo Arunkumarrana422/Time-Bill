@@ -1,0 +1,11 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "databases": [
+      {
+        "databaseId": "(default)",
+        "rules": "firestore.rules"
+      }
+    ]
+  }
+}

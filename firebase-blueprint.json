@@ -1,0 +1,105 @@
+{
+  "entities": {
+    "User": {
+      "path": "users/{userId}",
+      "properties": {
+        "userId": "string",
+        "name": "string",
+        "businessName": "string",
+        "mobile": "string",
+        "address": "string",
+        "currency": "string",
+        "defaultRate": "number",
+        "invoicePrefix": "string",
+        "paymentTerms": "string",
+        "createdAt": "timestamp"
+      }
+    },
+    "Customer": {
+      "path": "users/{userId}/customers/{customerId}",
+      "properties": {
+        "customerId": "string",
+        "userId": "string",
+        "name": "string",
+        "mobile": "string",
+        "address": "string",
+        "village": "string",
+        "notes": "string",
+        "totalJobs": "number",
+        "totalAmount": "number",
+        "paidAmount": "number",
+        "pendingAmount": "number",
+        "updatedAt": "timestamp"
+      }
+    },
+    "Service": {
+      "path": "users/{userId}/services/{serviceId}",
+      "properties": {
+        "serviceId": "string",
+        "userId": "string",
+        "name": "string",
+        "description": "string",
+        "hourlyRate": "number",
+        "minuteRate": "number",
+        "minimumCharge": "number",
+        "isActive": "boolean"
+      }
+    },
+    "Job": {
+      "path": "users/{userId}/jobs/{jobId}",
+      "properties": {
+        "jobId": "string",
+        "userId": "string",
+        "customerId": "string",
+        "customerName": "string",
+        "serviceId": "string",
+        "serviceName": "string",
+        "date": "string",
+        "startTime": "string",
+        "endTime": "string",
+        "totalDurationMinutes": "number",
+        "breakDurationMinutes": "number",
+        "billableDurationMinutes": "number",
+        "rate": "number",
+        "baseAmount": "number",
+        "additionalChargesAmount": "number",
+        "discountAmount": "number",
+        "finalAmount": "number",
+        "paidAmount": "number",
+        "pendingAmount": "number",
+        "paymentStatus": "string",
+        "status": "string",
+        "notes": "string",
+        "createdAt": "timestamp"
+      }
+    },
+    "Payment": {
+      "path": "users/{userId}/payments/{paymentId}",
+      "properties": {
+        "paymentId": "string",
+        "userId": "string",
+        "customerId": "string",
+        "jobId": "string",
+        "amount": "number",
+        "method": "string",
+        "date": "string",
+        "notes": "string",
+        "createdAt": "timestamp"
+      }
+    },
+    "Expense": {
+      "path": "users/{userId}/expenses/{expenseId}",
+      "properties": {
+        "expenseId": "string",
+        "userId": "string",
+        "name": "string",
+        "category": "string",
+        "amount": "number",
+        "date": "string",
+        "description": "string",
+        "paymentMethod": "string",
+        "createdAt": "timestamp"
+      }
+    }
+  }
+}
