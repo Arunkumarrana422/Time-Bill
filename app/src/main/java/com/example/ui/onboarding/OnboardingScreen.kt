@@ -27,7 +27,10 @@ fun OnboardingScreen(
     var currentPage by remember { mutableStateOf(0) }
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding(),
         color = MaterialTheme.colorScheme.background
     ) {
         Column(

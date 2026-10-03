@@ -14,6 +14,7 @@ import com.example.data.repository.TimeBillRepository
 import com.example.data.model.UserProfile
 import com.example.ui.auth.AuthScreen
 import com.example.ui.navigation.TimeBillNavGraph
+import com.example.ui.util.clearFocusOnTap
 import com.example.ui.theme.TimeBillTheme
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
@@ -37,7 +38,11 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             TimeBillTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clearFocusOnTap()
+                ) {
                     var currentUser by remember {
                         mutableStateOf(
                             try {

@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.*
 import com.example.data.repository.TimeBillRepository
+import com.example.ui.util.clearFocusOnTap
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -69,6 +70,7 @@ fun ManualJobScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .clearFocusOnTap()
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)

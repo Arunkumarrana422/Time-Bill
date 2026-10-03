@@ -15,13 +15,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.UserProfile
 import com.example.data.repository.TimeBillRepository
+import com.example.ui.util.clearFocusOnTap
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.launch
@@ -58,67 +61,108 @@ fun AuthScreen(
     }
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .clearFocusOnTap(),
         color = MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
+                .padding(horizontal = 24.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // App Title / Branding
+            // App Branding Header
             Text(
                 text = "🚜 Time Bill",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Professional Time Tracking & Billing",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = when {
-                            isForgotPassword -> "Reset Password"
-                            isRegisterMode -> "Create Account"
-                            else -> "Welcome Back"
-                        },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    if (!isForgotPassword) {
+                        // Top Switch Tabs: Login | Create Account
+                        TabRow(
+                            selectedTabIndex = if (isRegisterMode) 1 else 0,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            divider = {},
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        ) {
+                            Tab(
+                                selected = !isRegisterMode,
+                                onClick = {
+                                    isRegisterMode = false
+                                    errorMessage = null
+                                    successMessage = null
+                                },
+                                text = { Text("Login", fontWeight = if (!isRegisterMode) FontWeight.Bold else FontWeight.Normal) }
+                            )
+                            Tab(
+                                selected = isRegisterMode,
+                                onClick = {
+                                    isRegisterMode = true
+                                    errorMessage = null
+                                    successMessage = null
+                                },
+                                text = { Text("Create Account", fontWeight = if (isRegisterMode) FontWeight.Bold else FontWeight.Normal) }
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
+                    } else {
+                        // Forgot Password Header
+                        Text(
+                            text = "Reset Password",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Enter your registered email to receive reset instructions.",
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
 
                     if (errorMessage != null) {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             color = MaterialTheme.colorScheme.errorContainer,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Text(
                                 text = errorMessage!!,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.padding(12.dp),
-                                fontSize = 14.sp
+                                fontSize = 13.sp
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
@@ -128,13 +172,13 @@ fun AuthScreen(
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Text(
                                 text = successMessage!!,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.padding(12.dp),
-                                fontSize = 14.sp
+                                fontSize = 13.sp
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
@@ -147,7 +191,8 @@ fun AuthScreen(
                             label = { Text("Full Name") },
                             leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -157,7 +202,8 @@ fun AuthScreen(
                             label = { Text("Business / Service Name") },
                             leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -167,7 +213,8 @@ fun AuthScreen(
                             label = { Text("Mobile Number") },
                             leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
@@ -178,7 +225,8 @@ fun AuthScreen(
                         label = { Text("Email Address") },
                         leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -190,9 +238,34 @@ fun AuthScreen(
                             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (!isRegisterMode) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        isForgotPassword = true
+                                        errorMessage = null
+                                        successMessage = null
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "Forgot Password?",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
                     }
 
                     if (isRegisterMode) {
@@ -203,11 +276,15 @@ fun AuthScreen(
                             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
+                    } else if (!isForgotPassword) {
+                        Spacer(modifier = Modifier.height(6.dp))
                     }
 
+                    // Main Action Button
                     Button(
                         onClick = {
                             if (auth == null) {
@@ -229,7 +306,6 @@ fun AuthScreen(
                                     if (isForgotPassword) {
                                         auth.sendPasswordResetEmail(email.trim()).await()
                                         successMessage = "Password reset link sent to $email."
-                                        isForgotPassword = false
                                     } else if (isRegisterMode) {
                                         if (password != confirmPassword) {
                                             errorMessage = "Passwords do not match."
@@ -261,8 +337,8 @@ fun AuthScreen(
                                 } catch (e: Exception) {
                                     val msg = e.localizedMessage ?: ""
                                     errorMessage = when {
-                                        msg.contains("already in use", ignoreCase = true) -> "This email is already registered. Please login."
-                                        msg.contains("no user record", ignoreCase = true) || msg.contains("user-not-found", ignoreCase = true) -> "No account found with this email. Please register."
+                                        msg.contains("already in use", ignoreCase = true) -> "This email is already registered. Please sign in."
+                                        msg.contains("no user record", ignoreCase = true) || msg.contains("user-not-found", ignoreCase = true) -> "No account found with this email. Please create an account."
                                         msg.contains("password", ignoreCase = true) && (msg.contains("weak", ignoreCase = true) || msg.contains("characters", ignoreCase = true)) -> "Password must be at least 6 characters."
                                         msg.contains("credential", ignoreCase = true) || msg.contains("invalid-credential", ignoreCase = true) || msg.contains("password is invalid", ignoreCase = true) -> "Invalid email or password."
                                         else -> msg.ifBlank { "Authentication failed. Please check details." }
@@ -299,25 +375,66 @@ fun AuthScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        TextButton(onClick = {
-                            isForgotPassword = !isForgotPassword
-                            errorMessage = null
-                            successMessage = null
-                        }) {
-                            Text(if (isForgotPassword) "Back to Login" else "Forgot Password?")
+                    // Bottom navigation text links
+                    if (isForgotPassword) {
+                        TextButton(
+                            onClick = {
+                                isForgotPassword = false
+                                errorMessage = null
+                                successMessage = null
+                            }
+                        ) {
+                            Text("← Back to Login", fontWeight = FontWeight.SemiBold)
                         }
-
-                        TextButton(onClick = {
-                            isRegisterMode = !isRegisterMode
-                            isForgotPassword = false
-                            errorMessage = null
-                            successMessage = null
-                        }) {
-                            Text(if (isRegisterMode) "Existing User? Login" else "Create Account")
+                    } else if (isRegisterMode) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Already have an account? ",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            TextButton(
+                                onClick = {
+                                    isRegisterMode = false
+                                    errorMessage = null
+                                    successMessage = null
+                                },
+                                contentPadding = PaddingValues(horizontal = 4.dp)
+                            ) {
+                                Text(
+                                    text = "Login",
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    } else {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Don't have an account? ",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            TextButton(
+                                onClick = {
+                                    isRegisterMode = true
+                                    errorMessage = null
+                                    successMessage = null
+                                },
+                                contentPadding = PaddingValues(horizontal = 4.dp)
+                            ) {
+                                Text(
+                                    text = "Create Account",
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
