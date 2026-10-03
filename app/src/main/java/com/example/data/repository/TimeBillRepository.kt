@@ -14,11 +14,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 class TimeBillRepository(private val context: Context) {
-    private val db: FirebaseFirestore = FirebaseFirestore.getInstance(
-        context.applicationContext.getString(R.string.firestore_database_id)
-    )
+    private val db: FirebaseFirestore by lazy {
+        try {
+            FirebaseFirestore.getInstance()
+        } catch (e: Exception) {
+            Log.e("Repo", "Failed to get Firestore instance", e)
+            FirebaseFirestore.getInstance()
+        }
+    }
     private val appDb = AppDatabase.getDatabase(context)
-    private val auth = Firebase.auth
+    private val auth by lazy { Firebase.auth }
 
     private fun requireUserId(): String {
         return auth.currentUser?.uid ?: "local_offline_user"
