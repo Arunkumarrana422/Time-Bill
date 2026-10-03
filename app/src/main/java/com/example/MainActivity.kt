@@ -54,7 +54,6 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .clearFocusOnTap()
                 ) {
-                    var showSplash by remember { mutableStateOf(true) }
                     var currentUser by remember {
                         mutableStateOf(
                             try {
@@ -93,6 +92,7 @@ class MainActivity : ComponentActivity() {
                             currentUser?.uid?.let { uid ->
                                 scope.launch {
                                     try {
+                                        repository.syncDataFromFirestore(uid)
                                         repository.seedDefaultServicesIfNeeded(uid)
                                         val profile = repository.getUser(uid)
                                         userProfile = profile
@@ -109,11 +109,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    if (showSplash || (currentUser != null && !isProfileLoaded)) {
-                        SplashScreen(
-                            onSplashFinished = { showSplash = false }
-                        )
-                    } else if (currentUser == null) {
+                    if (currentUser == null) {
                         AuthScreen(
                             repository = repository,
                             onAuthSuccess = {

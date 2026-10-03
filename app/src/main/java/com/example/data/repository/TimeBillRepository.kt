@@ -11,6 +11,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 class TimeBillRepository(private val context: Context) {
@@ -237,6 +238,63 @@ class TimeBillRepository(private val context: Context) {
                 defaultServices.forEach { service ->
                     saveService(service)
                 }
+            }
+        }
+    }
+
+    suspend fun syncDataFromFirestore(userId: String) {
+        if (userId.isEmpty() || userId == "local_offline_user") return
+        withContext(Dispatchers.IO) {
+            try {
+                val userDoc = db.collection("users").document(userId).get().await()
+                if (userDoc.exists()) {
+                    val profile = userDoc.toObject(UserProfile::class.java)
+                    if (profile != null) {
+                        appDb.userDao().insertUser(profile)
+                    }
+                }
+
+                val customersSnap = db.collection("users").document(userId).collection("customers").get().await()
+                for (doc in customersSnap.documents) {
+                    val customer = doc.toObject(Customer::class.java)
+                    if (customer != null) {
+                        appDb.customerDao().insertCustomer(customer)
+                    }
+                }
+
+                val servicesSnap = db.collection("users").document(userId).collection("services").get().await()
+                for (doc in servicesSnap.documents) {
+                    val service = doc.toObject(ServiceItem::class.java)
+                    if (service != null) {
+                        appDb.serviceDao().insertService(service)
+                    }
+                }
+
+                val jobsSnap = db.collection("users").document(userId).collection("jobs").get().await()
+                for (doc in jobsSnap.documents) {
+                    val job = doc.toObject(Job::class.java)
+                    if (job != null) {
+                        appDb.jobDao().insertJob(job)
+                    }
+                }
+
+                val paymentsSnap = db.collection("users").document(userId).collection("payments").get().await()
+                for (doc in paymentsSnap.documents) {
+                    val payment = doc.toObject(Payment::class.java)
+                    if (payment != null) {
+                        appDb.paymentDao().insertPayment(payment)
+                    }
+                }
+
+                val expensesSnap = db.collection("users").document(userId).collection("expenses").get().await()
+                for (doc in expensesSnap.documents) {
+                    val expense = doc.toObject(Expense::class.java)
+                    if (expense != null) {
+                        appDb.expenseDao().insertExpense(expense)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("Repo", "Error syncing data from Firestore", e)
             }
         }
     }
