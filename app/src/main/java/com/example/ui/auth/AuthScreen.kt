@@ -27,6 +27,7 @@ import com.example.data.model.UserProfile
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.util.clearFocusOnTap
 import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -59,11 +60,22 @@ fun AuthScreen(
         } catch (e: Exception) {
             try {
                 if (FirebaseApp.getApps(context).isEmpty()) {
-                    FirebaseApp.initializeApp(context)
+                    try {
+                        FirebaseApp.initializeApp(context)
+                    } catch (eInit: Exception) {
+                        val options = FirebaseOptions.Builder()
+                            .setApplicationId("1:648141005997:android:31dcf5a9729b4979c65224")
+                            .setApiKey("AIzaSyAUe5cJqA1PDO6LLe0a4Hv1vdDjuM8WEuk")
+                            .setProjectId("time-bill-management")
+                            .setDatabaseUrl("https://time-bill-management-default-rtdb.firebaseio.com")
+                            .setStorageBucket("time-bill-management.firebasestorage.app")
+                            .build()
+                        FirebaseApp.initializeApp(context, options)
+                    }
                 }
                 FirebaseAuth.getInstance()
             } catch (e2: Exception) {
-                Log.e("AuthScreen", "Firebase init error", e2)
+                Log.e("AuthScreen", "Firebase init fallback error", e2)
                 null
             }
         }
@@ -296,17 +308,21 @@ fun AuthScreen(
                     // Main Action Button
                     Button(
                         onClick = {
-                            val fAuth = getFirebaseAuth()
-                            if (fAuth == null) {
-                                errorMessage = "Unable to connect to Authentication service. Please check internet connection."
-                                return@Button
-                            }
                             if (email.isBlank()) {
                                 errorMessage = "Please enter your email address."
                                 return@Button
                             }
                             if (!isForgotPassword && password.isBlank()) {
                                 errorMessage = "Please enter your password."
+                                return@Button
+                            }
+                            if (isRegisterMode && fullName.isBlank()) {
+                                errorMessage = "Please enter your full name."
+                                return@Button
+                            }
+                            val fAuth = getFirebaseAuth()
+                            if (fAuth == null) {
+                                errorMessage = "Unable to connect to Authentication service. Please check internet connection."
                                 return@Button
                             }
                             isLoading = true

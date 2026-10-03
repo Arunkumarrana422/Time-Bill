@@ -18,6 +18,7 @@ import com.example.ui.util.clearFocusOnTap
 import com.example.ui.theme.TimeBillTheme
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.collectLatest
@@ -27,7 +28,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
-            FirebaseApp.initializeApp(this)
+            if (FirebaseApp.getApps(this).isEmpty()) {
+                try {
+                    FirebaseApp.initializeApp(this)
+                } catch (e: Exception) {
+                    val options = FirebaseOptions.Builder()
+                        .setApplicationId("1:648141005997:android:31dcf5a9729b4979c65224")
+                        .setApiKey("AIzaSyAUe5cJqA1PDO6LLe0a4Hv1vdDjuM8WEuk")
+                        .setProjectId("time-bill-management")
+                        .setDatabaseUrl("https://time-bill-management-default-rtdb.firebaseio.com")
+                        .setStorageBucket("time-bill-management.firebasestorage.app")
+                        .build()
+                    FirebaseApp.initializeApp(this, options)
+                }
+            }
         } catch (e: Exception) {
             Log.e("MainActivity", "FirebaseApp init error: ${e.message}")
         }
