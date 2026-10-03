@@ -39,6 +39,9 @@ interface ServiceDao {
     @Query("SELECT * FROM services WHERE userId = :userId ORDER BY name ASC")
     fun observeServices(userId: String): Flow<List<ServiceItem>>
 
+    @Query("SELECT * FROM services WHERE userId = :userId ORDER BY name ASC")
+    suspend fun getServicesList(userId: String): List<ServiceItem>
+
     @Query("SELECT * FROM services WHERE serviceId = :serviceId")
     suspend fun getServiceById(serviceId: String): ServiceItem?
 

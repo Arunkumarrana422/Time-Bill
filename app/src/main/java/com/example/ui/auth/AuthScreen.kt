@@ -1,6 +1,5 @@
 package com.example.ui.auth
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -29,6 +28,7 @@ import com.example.ui.util.clearFocusOnTap
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -54,30 +54,23 @@ fun AuthScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
 
-    fun getFirebaseAuth(): FirebaseAuth? {
+    fun getFirebaseAuth(): FirebaseAuth {
         return try {
             FirebaseAuth.getInstance()
         } catch (e: Exception) {
-            try {
-                if (FirebaseApp.getApps(context).isEmpty()) {
-                    try {
-                        FirebaseApp.initializeApp(context)
-                    } catch (eInit: Exception) {
-                        val options = FirebaseOptions.Builder()
-                            .setApplicationId("1:648141005997:android:31dcf5a9729b4979c65224")
-                            .setApiKey("AIzaSyAUe5cJqA1PDO6LLe0a4Hv1vdDjuM8WEuk")
-                            .setProjectId("time-bill-management")
-                            .setDatabaseUrl("https://time-bill-management-default-rtdb.firebaseio.com")
-                            .setStorageBucket("time-bill-management.firebasestorage.app")
-                            .build()
-                        FirebaseApp.initializeApp(context, options)
-                    }
-                }
-                FirebaseAuth.getInstance()
-            } catch (e2: Exception) {
-                Log.e("AuthScreen", "Firebase init fallback error", e2)
-                null
+            val options = FirebaseOptions.Builder()
+                .setApplicationId("1:648141005997:android:31dcf5a9729b4979c65224")
+                .setApiKey("AIzaSyAUe5cJqA1PDO6LLe0a4Hv1vdDjuM8WEuk")
+                .setProjectId("time-bill-management")
+                .setDatabaseUrl("https://time-bill-management-default-rtdb.firebaseio.com")
+                .setStorageBucket("time-bill-management.firebasestorage.app")
+                .build()
+            val app = if (FirebaseApp.getApps(context).isEmpty()) {
+                FirebaseApp.initializeApp(context.applicationContext, options)
+            } else {
+                FirebaseApp.getInstance()
             }
+            FirebaseAuth.getInstance(app)
         }
     }
 
@@ -308,6 +301,10 @@ fun AuthScreen(
                     // Main Action Button
                     Button(
                         onClick = {
+                            if (isRegisterMode && fullName.isBlank()) {
+                                errorMessage = "Please enter your full name."
+                                return@Button
+                            }
                             if (email.isBlank()) {
                                 errorMessage = "Please enter your email address."
                                 return@Button
@@ -316,52 +313,50 @@ fun AuthScreen(
                                 errorMessage = "Please enter your password."
                                 return@Button
                             }
-                            if (isRegisterMode && fullName.isBlank()) {
-                                errorMessage = "Please enter your full name."
+                            if (isRegisterMode && password != confirmPassword) {
+                                errorMessage = "Passwords do not match."
                                 return@Button
                             }
-                            val fAuth = getFirebaseAuth()
-                            if (fAuth == null) {
-                                errorMessage = "Unable to connect to Authentication service. Please check internet connection."
+                            if (isRegisterMode && password.length < 6) {
+                                errorMessage = "Password must be at least 6 characters."
                                 return@Button
                             }
+
                             isLoading = true
                             errorMessage = null
                             scope.launch {
                                 try {
+                                    val fAuth = getFirebaseAuth()
                                     if (isForgotPassword) {
                                         fAuth.sendPasswordResetEmail(email.trim()).await()
                                         successMessage = "Password reset link sent to $email."
                                     } else if (isRegisterMode) {
-                                        if (password != confirmPassword) {
-                                            errorMessage = "Passwords do not match."
-                                            isLoading = false
-                                            return@launch
-                                        }
-                                        if (password.length < 6) {
-                                            errorMessage = "Password must be at least 6 characters."
-                                            isLoading = false
-                                            return@launch
-                                        }
                                         val result = fAuth.createUserWithEmailAndPassword(email.trim(), password).await()
                                         val uid = result.user?.uid
                                         if (uid != null && repository != null) {
-                                            val profile = UserProfile(
-                                                userId = uid,
-                                                name = fullName.trim(),
-                                                businessName = businessName.trim(),
-                                                mobile = mobile.trim(),
-                                                isSetupComplete = fullName.isNotBlank()
-                                            )
-                                            repository.saveUserProfile(profile)
+                                            try {
+                                                val profile = UserProfile(
+                                                    userId = uid,
+                                                    name = fullName.trim(),
+                                                    businessName = businessName.trim(),
+                                                    mobile = mobile.trim(),
+                                                    isSetupComplete = fullName.isNotBlank()
+                                                )
+                                                repository.saveUserProfile(profile)
+                                            } catch (eProfile: Exception) {
+                                                Log.e("AuthScreen", "Profile save error: ${eProfile.message}")
+                                            }
                                         }
                                         onAuthSuccess()
                                     } else {
                                         fAuth.signInWithEmailAndPassword(email.trim(), password).await()
                                         onAuthSuccess()
                                     }
+                                } catch (e: CancellationException) {
+                                    // Coroutine cancelled because composition changed upon successful login - ignore and rethrow
+                                    throw e
                                 } catch (e: Exception) {
-                                    val msg = e.localizedMessage ?: ""
+                                    val msg = e.localizedMessage ?: e.message ?: ""
                                     Log.e("AuthScreen", "Auth error: $msg", e)
                                     errorMessage = when {
                                         msg.contains("already in use", ignoreCase = true) || msg.contains("EMAIL_EXISTS", ignoreCase = true) -> 
@@ -379,7 +374,7 @@ fun AuthScreen(
                                         msg.contains("USER_NOT_FOUND", ignoreCase = true) -> 
                                             "Incorrect your email & password"
                                         msg.contains("network", ignoreCase = true) -> 
-                                            "Network error. Please check your internet connection and try again."
+                                            "Network error. Please check your internet connection."
                                         else -> msg.ifBlank { "Incorrect your email & password" }
                                     }
                                 } finally {

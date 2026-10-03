@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.*
 import com.example.data.repository.TimeBillRepository
+import com.example.ui.util.clearFocusOnTap
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -44,12 +45,36 @@ fun TimerScreen(
     var breakSeconds by remember { mutableStateOf(0L) }
     var currentElapsedSeconds by remember { mutableStateOf(0L) }
 
+    // Quick Add Dialog States
+    var showAddCustomerDialog by remember { mutableStateOf(false) }
+    var newCustomerName by remember { mutableStateOf("") }
+    var newCustomerMobile by remember { mutableStateOf("") }
+    var newCustomerVillage by remember { mutableStateOf("") }
+
+    var showAddServiceDialog by remember { mutableStateOf(false) }
+    var newServiceName by remember { mutableStateOf("") }
+    var newServiceRate by remember { mutableStateOf("500") }
+
     // Finish / Review Dialog state
     var showReviewDialog by remember { mutableStateOf(false) }
     var editableRate by remember { mutableStateOf("500") }
     var editableAmount by remember { mutableStateOf("0") }
 
     val scope = rememberCoroutineScope()
+
+    // Ensure services are seeded
+    LaunchedEffect(currentUserId) {
+        repository.seedDefaultServicesIfNeeded(currentUserId)
+    }
+
+    // Auto-select first service if none selected
+    LaunchedEffect(servicesState.value) {
+        if (selectedService == null && servicesState.value.isNotEmpty()) {
+            val first = servicesState.value.first()
+            selectedService = first
+            customRate = first.hourlyRate.toString()
+        }
+    }
 
     LaunchedEffect(isTimerStarted, isPaused, isOnBreak) {
         while (isTimerStarted && !isPaused) {
@@ -92,6 +117,7 @@ fun TimerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .clearFocusOnTap()
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -99,68 +125,141 @@ fun TimerScreen(
             if (!isTimerStarted) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text("Select Customer & Service", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        // Customer Dropdown + Quick Add
                         var customerExpanded by remember { mutableStateOf(false) }
-                        ExposedDropdownMenuBox(
-                            expanded = customerExpanded,
-                            onExpandedChange = { customerExpanded = !customerExpanded }
-                        ) {
-                            OutlinedTextField(
-                                value = selectedCustomer?.name ?: "Select Customer *",
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = customerExpanded) },
-                                modifier = Modifier.fillMaxWidth().menuAnchor()
-                            )
-                            ExposedDropdownMenu(
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            ExposedDropdownMenuBox(
                                 expanded = customerExpanded,
-                                onDismissRequest = { customerExpanded = false }
+                                onExpandedChange = { customerExpanded = !customerExpanded },
+                                modifier = Modifier.weight(1f)
                             ) {
-                                customersState.value.forEach { customer ->
+                                OutlinedTextField(
+                                    value = selectedCustomer?.name ?: "",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Customer *") },
+                                    placeholder = { Text("Select Customer") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = customerExpanded) },
+                                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = customerExpanded,
+                                    onDismissRequest = { customerExpanded = false }
+                                ) {
+                                    if (customersState.value.isEmpty()) {
+                                        DropdownMenuItem(
+                                            text = { Text("No customers found. Click + to add") },
+                                            onClick = {
+                                                customerExpanded = false
+                                                showAddCustomerDialog = true
+                                            }
+                                        )
+                                    } else {
+                                        customersState.value.forEach { customer ->
+                                            DropdownMenuItem(
+                                                text = { 
+                                                    Column {
+                                                        Text(customer.name, fontWeight = FontWeight.SemiBold)
+                                                        if (customer.mobile.isNotBlank()) {
+                                                            Text(customer.mobile, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                        }
+                                                    }
+                                                },
+                                                onClick = {
+                                                    selectedCustomer = customer
+                                                    customerExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                    HorizontalDivider()
                                     DropdownMenuItem(
-                                        text = { Text(customer.name) },
+                                        text = { Text("➕ Add New Customer", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
                                         onClick = {
-                                            selectedCustomer = customer
                                             customerExpanded = false
+                                            showAddCustomerDialog = true
                                         }
                                     )
                                 }
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            FilledTonalIconButton(
+                                onClick = { showAddCustomerDialog = true },
+                                modifier = Modifier.size(50.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.PersonAdd, contentDescription = "Add Customer")
                             }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        // Service Dropdown + Quick Add
                         var serviceExpanded by remember { mutableStateOf(false) }
-                        ExposedDropdownMenuBox(
-                            expanded = serviceExpanded,
-                            onExpandedChange = { serviceExpanded = !serviceExpanded }
-                        ) {
-                            OutlinedTextField(
-                                value = selectedService?.name ?: "Select Service *",
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = serviceExpanded) },
-                                modifier = Modifier.fillMaxWidth().menuAnchor()
-                            )
-                            ExposedDropdownMenu(
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            ExposedDropdownMenuBox(
                                 expanded = serviceExpanded,
-                                onDismissRequest = { serviceExpanded = false }
+                                onExpandedChange = { serviceExpanded = !serviceExpanded },
+                                modifier = Modifier.weight(1f)
                             ) {
-                                servicesState.value.forEach { service ->
+                                OutlinedTextField(
+                                    value = selectedService?.name ?: "",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Service *") },
+                                    placeholder = { Text("Select Service") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = serviceExpanded) },
+                                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = serviceExpanded,
+                                    onDismissRequest = { serviceExpanded = false }
+                                ) {
+                                    servicesState.value.forEach { service ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(service.name, fontWeight = FontWeight.Medium)
+                                                    Text("₹${service.hourlyRate.toInt()}/hr", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                                }
+                                            },
+                                            onClick = {
+                                                selectedService = service
+                                                customRate = service.hourlyRate.toString()
+                                                serviceExpanded = false
+                                            }
+                                        )
+                                    }
+                                    HorizontalDivider()
                                     DropdownMenuItem(
-                                        text = { Text("${service.name} (₹${service.hourlyRate}/hr)") },
+                                        text = { Text("➕ Add Custom Service", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
                                         onClick = {
-                                            selectedService = service
-                                            customRate = service.hourlyRate.toString()
                                             serviceExpanded = false
+                                            showAddServiceDialog = true
                                         }
                                     )
                                 }
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            FilledTonalIconButton(
+                                onClick = { showAddServiceDialog = true },
+                                modifier = Modifier.size(50.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add Service")
                             }
                         }
 
@@ -171,7 +270,8 @@ fun TimerScreen(
                             onValueChange = { customRate = it },
                             label = { Text("Hourly Rate (₹) [Editable]") },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -180,7 +280,8 @@ fun TimerScreen(
                             value = notes,
                             onValueChange = { notes = it },
                             label = { Text("Job Notes (Optional)") },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
@@ -197,7 +298,11 @@ fun TimerScreen(
                         ) {
                             Icon(Icons.Default.PlayArrow, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Start Timer", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = if (selectedCustomer == null) "Select Customer First" else "Start Timer",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -243,7 +348,8 @@ fun TimerScreen(
                             onValueChange = { customRate = it },
                             label = { Text("Edit Rate (₹/hr)") },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -316,6 +422,130 @@ fun TimerScreen(
                     Text("Finish & Review Bill", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
+        }
+
+        // Quick Add Customer Dialog
+        if (showAddCustomerDialog) {
+            AlertDialog(
+                onDismissRequest = { showAddCustomerDialog = false },
+                title = { Text("➕ Add New Customer") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = newCustomerName,
+                            onValueChange = { newCustomerName = it },
+                            label = { Text("Customer Name *") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        OutlinedTextField(
+                            value = newCustomerMobile,
+                            onValueChange = { newCustomerMobile = it },
+                            label = { Text("Mobile Number") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        OutlinedTextField(
+                            value = newCustomerVillage,
+                            onValueChange = { newCustomerVillage = it },
+                            label = { Text("Village / Address") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (newCustomerName.isNotBlank()) {
+                                scope.launch {
+                                    val newCust = Customer(
+                                        customerId = "cust_${System.currentTimeMillis()}",
+                                        userId = currentUserId,
+                                        name = newCustomerName.trim(),
+                                        mobile = newCustomerMobile.trim(),
+                                        village = newCustomerVillage.trim()
+                                    )
+                                    repository.saveCustomer(newCust)
+                                    selectedCustomer = newCust
+                                    newCustomerName = ""
+                                    newCustomerMobile = ""
+                                    newCustomerVillage = ""
+                                    showAddCustomerDialog = false
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Save Customer")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAddCustomerDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // Quick Add Service Dialog
+        if (showAddServiceDialog) {
+            AlertDialog(
+                onDismissRequest = { showAddServiceDialog = false },
+                title = { Text("➕ Add New Service") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = newServiceName,
+                            onValueChange = { newServiceName = it },
+                            label = { Text("Service Name * (e.g. Harrowing)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        OutlinedTextField(
+                            value = newServiceRate,
+                            onValueChange = { newServiceRate = it },
+                            label = { Text("Hourly Rate (₹)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (newServiceName.isNotBlank()) {
+                                val sRate = newServiceRate.toDoubleOrNull() ?: 500.0
+                                scope.launch {
+                                    val newSrv = ServiceItem(
+                                        serviceId = "srv_${System.currentTimeMillis()}",
+                                        userId = currentUserId,
+                                        name = newServiceName.trim(),
+                                        hourlyRate = sRate,
+                                        minimumCharge = sRate / 2
+                                    )
+                                    repository.saveService(newSrv)
+                                    selectedService = newSrv
+                                    customRate = sRate.toString()
+                                    newServiceName = ""
+                                    showAddServiceDialog = false
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Save Service")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAddServiceDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
 
         if (showReviewDialog) {
