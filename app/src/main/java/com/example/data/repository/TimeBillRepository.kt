@@ -214,22 +214,8 @@ class TimeBillRepository(private val context: Context) {
         }
     }
 
-    // Seed default services if empty
+    // Optional helper (no dummy seeding)
     suspend fun seedDefaultServicesIfNeeded(userId: String) {
-        withContext(Dispatchers.IO) {
-            val defaultServices = listOf(
-                ServiceItem("srv_1", userId, "Tractor Ploughing", "Deep ploughing with cultivator", 700.0, 11.66, 200.0, true),
-                ServiceItem("srv_2", userId, "Field Sowing", "Seed sowing and planting", 600.0, 10.0, 200.0, true),
-                ServiceItem("srv_3", userId, "Harvesting", "Crop harvesting and cutting", 800.0, 13.33, 300.0, true),
-                ServiceItem("srv_4", userId, "Threshing", "Grain threshing operation", 900.0, 15.0, 300.0, true),
-                ServiceItem("srv_5", userId, "Transportation", "Trolley transport of goods/crops", 650.0, 10.83, 250.0, true),
-                ServiceItem("srv_6", userId, "Rotavator", "Rotavator farm tilling", 750.0, 12.5, 250.0, true),
-                ServiceItem("srv_7", userId, "Water Pump", "Irrigation water pumping", 400.0, 6.66, 150.0, true),
-                ServiceItem("srv_8", userId, "Labour Work", "General farm labour work", 300.0, 5.0, 100.0, true)
-            )
-            for (srv in defaultServices) {
-                appDb.serviceDao().insertService(srv)
-            }
-        }
+        // No dummy data automatically inserted - user creates their own services
     }
 }

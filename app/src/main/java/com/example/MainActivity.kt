@@ -47,7 +47,6 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-                    var isGuestMode by remember { mutableStateOf(false) }
                     val navController = rememberNavController()
                     val scope = rememberCoroutineScope()
 
@@ -68,10 +67,8 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    val effectiveUserId = currentUser?.uid ?: if (isGuestMode) "offline_user" else null
-
-                    LaunchedEffect(effectiveUserId) {
-                        effectiveUserId?.let { uid ->
+                    LaunchedEffect(currentUser) {
+                        currentUser?.uid?.let { uid ->
                             scope.launch {
                                 try {
                                     repository.seedDefaultServicesIfNeeded(uid)
@@ -85,23 +82,19 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    if (effectiveUserId == null) {
+                    if (currentUser == null) {
                         AuthScreen(
+                            repository = repository,
                             onAuthSuccess = {
                                 currentUser = try { Firebase.auth.currentUser } catch (e: Exception) { null }
-                                if (currentUser == null) {
-                                    isGuestMode = true
-                                }
-                            },
-                            onContinueOffline = {
-                                isGuestMode = true
                             }
                         )
                     } else {
+                        val userId = currentUser!!.uid
                         TimeBillNavGraph(
                             navController = navController,
                             repository = repository,
-                            currentUserId = effectiveUserId,
+                            currentUserId = userId,
                             userProfile = userProfile,
                             onSignOut = {
                                 try {
@@ -110,7 +103,6 @@ class MainActivity : ComponentActivity() {
                                     // ignore
                                 }
                                 currentUser = null
-                                isGuestMode = false
                             }
                         )
                     }

@@ -1,13 +1,12 @@
 package com.example.ui.auth
 
-import android.app.Activity
 import android.util.Log
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -19,37 +18,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.credentials.CredentialManager
-import androidx.credentials.CustomCredential
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialCancellationException
-import com.example.R
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+import com.example.data.model.UserProfile
+import com.example.data.repository.TimeBillRepository
 import com.google.firebase.Firebase
-import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 @Composable
 fun AuthScreen(
-    onAuthSuccess: () -> Unit,
-    onContinueOffline: () -> Unit = onAuthSuccess
+    repository: TimeBillRepository? = null,
+    onAuthSuccess: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val credentialManager = remember { 
-        try {
-            CredentialManager.create(context)
-        } catch (e: Exception) {
-            null
-        }
-    }
 
     var isRegisterMode by remember { mutableStateOf(false) }
     var isForgotPassword by remember { mutableStateOf(false) }
@@ -73,46 +57,6 @@ fun AuthScreen(
         }
     }
 
-    fun handleGoogleSignIn() {
-        if (credentialManager == null || auth == null) {
-            errorMessage = "Google Play Services is unavailable on this device. You can use Email/Password or Offline Mode."
-            return
-        }
-        val clientId = try {
-            context.getString(R.string.default_web_client_id)
-        } catch (e: Exception) {
-            "648141005997-mlnn01ogm3c4ecgatfoeaak25002723o.apps.googleusercontent.com"
-        }
-        val signInOption = GetSignInWithGoogleOption.Builder(serverClientId = clientId).build()
-        val request = GetCredentialRequest.Builder().addCredentialOption(signInOption).build()
-
-        isLoading = true
-        errorMessage = null
-
-        scope.launch {
-            try {
-                val result = credentialManager.getCredential(context as Activity, request)
-                val credential = result.credential
-                if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
-                    val authCredential = GoogleAuthProvider.getCredential(googleIdToken, null)
-                    auth.signInWithCredential(authCredential).await()
-                    isLoading = false
-                    onAuthSuccess()
-                } else {
-                    isLoading = false
-                    errorMessage = "Unexpected credential type."
-                }
-            } catch (e: GetCredentialCancellationException) {
-                isLoading = false
-                Log.w("Auth", "Google sign-in cancelled")
-            } catch (e: Exception) {
-                isLoading = false
-                errorMessage = e.localizedMessage ?: "Google Sign-In failed"
-            }
-        }
-    }
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -132,19 +76,20 @@ fun AuthScreen(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = "Professional Time Tracking & Billing",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
@@ -157,7 +102,8 @@ fun AuthScreen(
                             else -> "Welcome Back"
                         },
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -209,6 +155,7 @@ fun AuthScreen(
                             value = businessName,
                             onValueChange = { businessName = it },
                             label = { Text("Business / Service Name") },
+                            leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true
                         )
@@ -264,11 +211,15 @@ fun AuthScreen(
                     Button(
                         onClick = {
                             if (auth == null) {
-                                errorMessage = "Firebase Auth service is unavailable. Please click 'Continue in Offline Mode' below."
+                                errorMessage = "Authentication service is currently unavailable."
                                 return@Button
                             }
                             if (email.isBlank()) {
-                                errorMessage = "Please enter email"
+                                errorMessage = "Please enter your email address."
+                                return@Button
+                            }
+                            if (!isForgotPassword && password.isBlank()) {
+                                errorMessage = "Please enter your password."
                                 return@Button
                             }
                             isLoading = true
@@ -276,8 +227,8 @@ fun AuthScreen(
                             scope.launch {
                                 try {
                                     if (isForgotPassword) {
-                                        auth.sendPasswordResetEmail(email).await()
-                                        successMessage = "Password reset email sent."
+                                        auth.sendPasswordResetEmail(email.trim()).await()
+                                        successMessage = "Password reset link sent to $email."
                                         isForgotPassword = false
                                     } else if (isRegisterMode) {
                                         if (password != confirmPassword) {
@@ -285,27 +236,45 @@ fun AuthScreen(
                                             isLoading = false
                                             return@launch
                                         }
-                                        auth.createUserWithEmailAndPassword(email, password).await()
+                                        if (password.length < 6) {
+                                            errorMessage = "Password must be at least 6 characters."
+                                            isLoading = false
+                                            return@launch
+                                        }
+                                        val result = auth.createUserWithEmailAndPassword(email.trim(), password).await()
+                                        val uid = result.user?.uid
+                                        if (uid != null && repository != null) {
+                                            val profile = UserProfile(
+                                                userId = uid,
+                                                name = fullName.trim(),
+                                                businessName = businessName.trim(),
+                                                mobile = mobile.trim(),
+                                                isSetupComplete = fullName.isNotBlank()
+                                            )
+                                            repository.saveUserProfile(profile)
+                                        }
                                         onAuthSuccess()
                                     } else {
-                                        auth.signInWithEmailAndPassword(email, password).await()
+                                        auth.signInWithEmailAndPassword(email.trim(), password).await()
                                         onAuthSuccess()
                                     }
                                 } catch (e: Exception) {
                                     val msg = e.localizedMessage ?: ""
                                     errorMessage = when {
-                                        msg.contains("already in use", ignoreCase = true) -> "This email is already registered. Please sign in instead."
+                                        msg.contains("already in use", ignoreCase = true) -> "This email is already registered. Please login."
                                         msg.contains("no user record", ignoreCase = true) || msg.contains("user-not-found", ignoreCase = true) -> "No account found with this email. Please register."
-                                        msg.contains("password", ignoreCase = true) && (msg.contains("weak", ignoreCase = true) || msg.contains("characters", ignoreCase = true)) -> "Password should be at least 6 characters."
-                                        msg.contains("credential", ignoreCase = true) || msg.contains("invalid-credential", ignoreCase = true) || msg.contains("password is invalid", ignoreCase = true) -> "Invalid email or password. Please check your credentials."
-                                        else -> msg.ifBlank { "Authentication error occurred. Please try again." }
+                                        msg.contains("password", ignoreCase = true) && (msg.contains("weak", ignoreCase = true) || msg.contains("characters", ignoreCase = true)) -> "Password must be at least 6 characters."
+                                        msg.contains("credential", ignoreCase = true) || msg.contains("invalid-credential", ignoreCase = true) || msg.contains("password is invalid", ignoreCase = true) -> "Invalid email or password."
+                                        else -> msg.ifBlank { "Authentication failed. Please check details." }
                                     }
                                 } finally {
                                     isLoading = false
                                 }
                             }
                         },
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         enabled = !isLoading
                     ) {
@@ -318,7 +287,7 @@ fun AuthScreen(
                         } else {
                             Text(
                                 text = when {
-                                    isForgotPassword -> "Send Reset Instructions"
+                                    isForgotPassword -> "Send Reset Link"
                                     isRegisterMode -> "Create Account"
                                     else -> "Login"
                                 },
@@ -329,18 +298,6 @@ fun AuthScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-
-                    if (!isForgotPassword) {
-                        OutlinedButton(
-                            onClick = { handleGoogleSignIn() },
-                            modifier = Modifier.fillMaxWidth().height(50.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !isLoading
-                        ) {
-                            Text("Sign in with Google", fontWeight = FontWeight.SemiBold)
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -362,15 +319,6 @@ fun AuthScreen(
                         }) {
                             Text(if (isRegisterMode) "Existing User? Login" else "Create Account")
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    TextButton(
-                        onClick = { onContinueOffline() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("🚀 Continue in Offline / Local Mode", color = MaterialTheme.colorScheme.secondary)
                     }
                 }
             }
