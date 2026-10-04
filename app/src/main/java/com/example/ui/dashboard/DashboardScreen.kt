@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -336,10 +337,14 @@ fun DashboardScreen(
                             onClick = { onNavigate(Screen.JobDetail.createRoute(job.jobId)) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(jobCardShape),
+                                .shadow(
+                                    elevation = 2.5.dp,
+                                    shape = jobCardShape,
+                                    ambientColor = Color.Black.copy(alpha = 0.08f),
+                                    spotColor = Color.Black.copy(alpha = 0.16f)
+                                ),
                             shape = jobCardShape,
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -437,10 +442,14 @@ fun MetricCard(
 ) {
     val cardShape = RoundedCornerShape(16.dp)
     Card(
-        modifier = modifier.clip(cardShape),
+        modifier = modifier.shadow(
+            elevation = 2.5.dp,
+            shape = cardShape,
+            ambientColor = Color.Black.copy(alpha = 0.08f),
+            spotColor = Color.Black.copy(alpha = 0.16f)
+        ),
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)

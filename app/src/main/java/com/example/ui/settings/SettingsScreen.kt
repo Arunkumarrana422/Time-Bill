@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -247,15 +248,19 @@ fun SettingsScreen(
                 }
             }
 
-            // User Profile Card with rounded ripple clip
+            // User Profile Card with subtle soft shadow
             val profileCardShape = RoundedCornerShape(18.dp)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(profileCardShape),
+                    .shadow(
+                        elevation = 2.5.dp,
+                        shape = profileCardShape,
+                        ambientColor = Color.Black.copy(alpha = 0.08f),
+                        spotColor = Color.Black.copy(alpha = 0.16f)
+                    ),
                 shape = profileCardShape,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp).fillMaxWidth(),
@@ -394,15 +399,19 @@ fun SettingsScreen(
                 }
             }
 
-            // Quick App Management Cards with Rounded Ripple shapes
+            // Quick App Management Cards with subtle soft shadow
             val manageCardShape = RoundedCornerShape(18.dp)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(manageCardShape),
+                    .shadow(
+                        elevation = 2.5.dp,
+                        shape = manageCardShape,
+                        ambientColor = Color.Black.copy(alpha = 0.08f),
+                        spotColor = Color.Black.copy(alpha = 0.16f)
+                    ),
                 shape = manageCardShape,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Business Management", fontWeight = FontWeight.Bold, fontSize = 16.sp)
