@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,8 +39,8 @@ fun JobListScreen(
     var filterStatus by remember { mutableStateOf("All") }
 
     val filteredJobs = when (filterStatus) {
-        "Paid" -> jobsState.value.filter { it.paymentStatus == "Paid" }
-        "Pending" -> jobsState.value.filter { it.paymentStatus == "Pending" || it.paymentStatus == "Partially Paid" }
+        "Paid" -> jobsState.value.filter { it.paymentStatus == "Paid" || it.pendingAmount <= 0 }
+        "Pending" -> jobsState.value.filter { it.paymentStatus != "Paid" && it.pendingAmount > 0 }
         else -> jobsState.value
     }
 
@@ -100,16 +101,24 @@ fun JobListScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilterChip(selected = filterStatus == "All", onClick = { filterStatus = "All" }, label = { Text("All") })
-                FilterChip(selected = filterStatus == "Pending", onClick = { filterStatus = "Pending" }, label = { Text("Pending Dues") })
-                FilterChip(selected = filterStatus == "Paid", onClick = { filterStatus = "Paid" }, label = { Text("Paid") })
+                FilterChip(selected = filterStatus == "All", onClick = { filterStatus = "All" }, label = { Text("All (${jobsState.value.size})") })
+                FilterChip(
+                    selected = filterStatus == "Pending",
+                    onClick = { filterStatus = "Pending" },
+                    label = { Text("Pending Dues (${jobsState.value.count { it.pendingAmount > 0 }})") }
+                )
+                FilterChip(
+                    selected = filterStatus == "Paid",
+                    onClick = { filterStatus = "Paid" },
+                    label = { Text("Paid (${jobsState.value.count { it.paymentStatus == "Paid" || it.pendingAmount <= 0 }})") }
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             if (filteredJobs.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No jobs found.", style = MaterialTheme.typography.bodyLarge)
+                    Text("No jobs found.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -124,12 +133,14 @@ fun JobListScreen(
 
 @Composable
 fun JobCard(job: Job, onClick: () -> Unit) {
+    val isPaid = job.paymentStatus == "Paid" || job.pendingAmount <= 0
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -137,26 +148,43 @@ fun JobCard(job: Job, onClick: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(job.customerName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text("${job.serviceName} • ${job.date}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        text = "₹${job.finalAmount.toInt()}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = when (job.paymentStatus) {
-                            "Paid" -> MaterialTheme.colorScheme.primaryContainer
-                            "Partially Paid" -> MaterialTheme.colorScheme.secondaryContainer
-                            else -> MaterialTheme.colorScheme.errorContainer
-                        }
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (isPaid) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
                     ) {
-                        Text(job.paymentStatus, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 11.sp)
+                        Text(
+                            text = if (isPaid) "Paid" else "Pending: ₹${job.pendingAmount.toInt()}",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            fontSize = 11.sp,
+                            color = if (isPaid) Color(0xFF166534) else Color(0xFF991B1B),
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Duration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m | Rate: ₹${job.rate.toInt()}/hr", style = MaterialTheme.typography.bodySmall)
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Duration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m", style = MaterialTheme.typography.bodySmall)
+                Text("Rate: ₹${job.rate.toInt()}/hr", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+            }
         }
     }
 }
@@ -171,6 +199,7 @@ fun JobDetailScreen(
 ) {
     val context = LocalContext.current
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
+    val customersState = repository.observeCustomers(currentUserId).collectAsState(initial = emptyList())
     val job = jobsState.value.find { h -> h.jobId == jobId }
 
     var showPaymentDialog by remember { mutableStateOf(false) }
@@ -186,6 +215,8 @@ fun JobDetailScreen(
         return
     }
 
+    val isPaid = job.paymentStatus == "Paid" || job.pendingAmount <= 0
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -197,7 +228,7 @@ fun JobDetailScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        val shareText = "🚜 *TIME BILL INVOICE*\nCustomer: ${job.customerName}\nService: ${job.serviceName}\nDate: ${job.date}\nDuration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m\nAmount: *₹${job.finalAmount.toInt()}*\nStatus: *${job.paymentStatus}*\nThank you for your business!"
+                        val shareText = "🚜 *TIME BILL INVOICE*\nCustomer: ${job.customerName}\nService: ${job.serviceName}\nDate: ${job.date}\nDuration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m\nAmount: *₹${job.finalAmount.toInt()}*\nStatus: *${if (isPaid) "Paid" else "Pending Due: ₹" + job.pendingAmount.toInt()}*\nThank you for your business!"
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT, shareText)
@@ -222,7 +253,8 @@ fun JobDetailScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -231,7 +263,7 @@ fun JobDetailScreen(
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Service:", fontWeight = FontWeight.Medium)
-                            Text(job.serviceName)
+                            Text(job.serviceName, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Date & Time:", fontWeight = FontWeight.Medium)
@@ -246,7 +278,7 @@ fun JobDetailScreen(
                             Text("₹${job.rate.toInt()}/hr")
                         }
 
-                        Divider()
+                        HorizontalDivider()
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Grand Total:", fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -254,17 +286,24 @@ fun JobDetailScreen(
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Paid Amount:", fontWeight = FontWeight.Medium)
-                            Text("₹${job.paidAmount.toInt()}", color = MaterialTheme.colorScheme.secondary)
+                            Text("₹${job.paidAmount.toInt()}", color = Color(0xFF16A34A), fontWeight = FontWeight.SemiBold)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Pending Due:", fontWeight = FontWeight.Medium)
-                            Text("₹${job.pendingAmount.toInt()}", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = if (job.pendingAmount > 0) "₹${job.pendingAmount.toInt()}" else "₹0 (Fully Paid)",
+                                color = if (job.pendingAmount > 0) Color(0xFFDC2626) else Color(0xFF16A34A),
+                                fontWeight = FontWeight.Bold
+                            )
                         }
 
                         if (job.pendingAmount > 0) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Button(
-                                onClick = { showPaymentDialog = true },
+                                onClick = {
+                                    paymentAmount = job.pendingAmount.toInt().toString()
+                                    showPaymentDialog = true
+                                },
                                 modifier = Modifier.fillMaxWidth().height(48.dp),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
@@ -279,20 +318,24 @@ fun JobDetailScreen(
         if (showPaymentDialog) {
             AlertDialog(
                 onDismissRequest = { showPaymentDialog = false },
-                title = { Text("Record Payment") },
+                title = { Text("Record Payment for ${job.serviceName}") },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedTextField(
                             value = paymentAmount,
                             onValueChange = { paymentAmount = it },
                             label = { Text("Amount (₹)") },
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
                             value = paymentMethod,
                             onValueChange = { paymentMethod = it },
                             label = { Text("Method (Cash, UPI, Bank)") },
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 },
@@ -312,7 +355,7 @@ fun JobDetailScreen(
                                     amount = amt,
                                     method = paymentMethod,
                                     date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
-                                    notes = "Payment for job ${job.jobId}"
+                                    notes = "Payment for ${job.serviceName}"
                                 )
                                 repository.savePayment(payment)
 
@@ -326,6 +369,21 @@ fun JobDetailScreen(
                                     paymentStatus = newStatus
                                 )
                                 repository.saveJob(updatedJob)
+
+                                // Update Customer entity totals
+                                val customer = customersState.value.find { it.customerId == job.customerId }
+                                if (customer != null) {
+                                    val newCustPaid = customer.paidAmount + amt
+                                    val newCustPending = maxOf(0.0, customer.totalAmount - newCustPaid)
+                                    repository.saveCustomer(
+                                        customer.copy(
+                                            paidAmount = newCustPaid,
+                                            pendingAmount = newCustPending,
+                                            updatedAt = System.currentTimeMillis()
+                                        )
+                                    )
+                                }
+
                                 showPaymentDialog = false
                             }
                         }

@@ -13,14 +13,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Customer
+import com.example.data.model.Payment
 import com.example.data.repository.TimeBillRepository
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +42,13 @@ fun CustomerDetailScreen(
     val customerJobs = jobsState.value.filter { it.customerId == customerId }
     val customerPayments = paymentsState.value.filter { it.customerId == customerId }
 
+    var showPaymentDialog by remember { mutableStateOf(false) }
+    var payAmount by remember { mutableStateOf("") }
+    var payMethod by remember { mutableStateOf("Cash") }
+    var payNotes by remember { mutableStateOf("") }
+
+    val scope = rememberCoroutineScope()
+
     if (customer == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -47,8 +57,9 @@ fun CustomerDetailScreen(
     }
 
     val totalBilling = customerJobs.sumOf { it.finalAmount }
-    val totalPaid = customerPayments.sumOf { it.amount }
-    val pendingDue = (totalBilling - totalPaid).coerceAtLeast(0.0)
+    val totalPaid = customerPayments.sumOf { it.amount } + customerJobs.sumOf { it.paidAmount }
+    val effectivePaid = maxOf(customer.paidAmount, totalPaid)
+    val pendingDue = maxOf(0.0, totalBilling - effectivePaid)
 
     Scaffold(
         topBar = {
@@ -67,15 +78,28 @@ fun CustomerDetailScreen(
                         Icon(Icons.Default.Phone, contentDescription = "Call")
                     }
                     IconButton(onClick = {
-                        val msg = "Hello ${customer.name}, your pending balance is ₹${pendingDue.toInt()} for Time Bill work. Please make payment at your earliest convenience. Thank you!"
+                        val msg = "Hello ${customer.name}, your total bill is ₹${totalBilling.toInt()}, Total Paid: ₹${effectivePaid.toInt()}, and Pending Due: ₹${pendingDue.toInt()} for Time Bill work. Please make payment at your earliest convenience. Thank you!"
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=${customer.mobile}&text=${Uri.encode(msg)}"))
                         context.startActivity(intent)
                     }) {
-                        Icon(Icons.Default.Chat, contentDescription = "WhatsApp Reminder")
+                        Icon(Icons.Default.Chat, contentDescription = "WhatsApp Reminder", tint = Color(0xFF25D366))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             )
+        },
+        floatingActionButton = {
+            if (pendingDue > 0) {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        payAmount = pendingDue.toInt().toString()
+                        showPaymentDialog = true
+                    },
+                    icon = { Icon(Icons.Default.Payment, contentDescription = null) },
+                    text = { Text("Receive Payment") },
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     ) { padding ->
         LazyColumn(
@@ -90,17 +114,17 @@ fun CustomerDetailScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Ledger Summary", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("📞 Mobile: ${customer.mobile}")
-                        if (customer.village.isNotEmpty()) Text("📍 Village: ${customer.village}")
-                        if (customer.address.isNotEmpty()) Text("🏠 Address: ${customer.address}")
+                        if (customer.village.isNotEmpty()) Text("📍 Village / Location: ${customer.village}")
                         if (customer.notes.isNotEmpty()) Text("📝 Notes: ${customer.notes}")
                         Spacer(modifier = Modifier.height(12.dp))
-                        Divider()
+                        HorizontalDivider()
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -108,15 +132,20 @@ fun CustomerDetailScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("Total Billing", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("₹${totalBilling.toInt()}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text("₹${totalBilling.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
                             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Total Paid", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("₹${totalPaid.toInt()}", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.primary)
+                                Text("Total Paid", style = MaterialTheme.typography.bodySmall, color = Color(0xFF16A34A))
+                                Text("₹${effectivePaid.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF16A34A))
                             }
                             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                Text("Pending Due", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("₹${pendingDue.toInt()}", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.error)
+                                Text("Pending Due", style = MaterialTheme.typography.bodySmall, color = if (pendingDue > 0) Color(0xFFDC2626) else Color(0xFF16A34A))
+                                Text(
+                                    text = if (pendingDue > 0) "₹${pendingDue.toInt()}" else "✓ All Paid",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = if (pendingDue > 0) Color(0xFFDC2626) else Color(0xFF16A34A)
+                                )
                             }
                         }
                     }
@@ -136,7 +165,8 @@ fun CustomerDetailScreen(
                 items(customerJobs) { job ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -149,7 +179,18 @@ fun CustomerDetailScreen(
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                                Text(job.paymentStatus, style = MaterialTheme.typography.bodySmall)
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = if (job.paymentStatus == "Paid") Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
+                                ) {
+                                    Text(
+                                        text = job.paymentStatus,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        fontSize = 11.sp,
+                                        color = if (job.paymentStatus == "Paid") Color(0xFF166534) else Color(0xFF991B1B),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }
@@ -169,7 +210,8 @@ fun CustomerDetailScreen(
                 items(customerPayments) { payment ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -177,14 +219,88 @@ fun CustomerDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text("Paid via ${payment.method}", fontWeight = FontWeight.Bold)
-                                Text(payment.date, style = MaterialTheme.typography.bodySmall)
+                                Text(if (payment.notes.isNotBlank() && !payment.notes.contains("job_")) payment.notes else "Payment via ${payment.method}", fontWeight = FontWeight.Bold)
+                                Text("${payment.method} • ${payment.date}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text("₹${payment.amount.toInt()}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 16.sp)
+                            Text("₹${payment.amount.toInt()}", fontWeight = FontWeight.Bold, color = Color(0xFF16A34A), fontSize = 16.sp)
                         }
                     }
                 }
             }
+        }
+
+        if (showPaymentDialog) {
+            AlertDialog(
+                onDismissRequest = { showPaymentDialog = false },
+                title = { Text("Receive Payment from ${customer.name}") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(
+                            value = payAmount,
+                            onValueChange = { payAmount = it },
+                            label = { Text("Amount (₹) *") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = payMethod,
+                            onValueChange = { payMethod = it },
+                            label = { Text("Payment Method (Cash, UPI, Bank)") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = payNotes,
+                            onValueChange = { payNotes = it },
+                            label = { Text("Notes (Optional)") },
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val amt = payAmount.toDoubleOrNull() ?: 0.0
+                            if (amt <= 0) return@Button
+                            scope.launch {
+                                val payId = "pay_${System.currentTimeMillis()}"
+                                val payment = Payment(
+                                    paymentId = payId,
+                                    userId = currentUserId,
+                                    customerId = customer.customerId,
+                                    customerName = customer.name,
+                                    amount = amt,
+                                    method = payMethod,
+                                    date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+                                    notes = if (payNotes.isNotBlank()) payNotes else "Payment received"
+                                )
+                                repository.savePayment(payment)
+
+                                val newPaid = effectivePaid + amt
+                                val newPending = maxOf(0.0, totalBilling - newPaid)
+                                val updatedCust = customer.copy(
+                                    paidAmount = newPaid,
+                                    pendingAmount = newPending,
+                                    updatedAt = System.currentTimeMillis()
+                                )
+                                repository.saveCustomer(updatedCust)
+
+                                showPaymentDialog = false
+                            }
+                        }
+                    ) {
+                        Text("Confirm Payment")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPaymentDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }

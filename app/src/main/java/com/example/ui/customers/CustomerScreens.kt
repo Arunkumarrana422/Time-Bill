@@ -14,11 +14,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Customer
+import com.example.data.model.Job
+import com.example.data.model.Payment
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.navigation.Screen
 import kotlinx.coroutines.launch
@@ -33,12 +36,14 @@ fun CustomerListScreen(
     onBack: () -> Unit
 ) {
     val customersState = repository.observeCustomers(currentUserId).collectAsState(initial = emptyList())
+    val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
+    val paymentsState = repository.observePayments(currentUserId).collectAsState(initial = emptyList())
+
     var searchQuery by remember { mutableStateOf("") }
     var showAddDialog by remember { mutableStateOf(false) }
 
     var name by remember { mutableStateOf("") }
     var mobile by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
     var village by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
@@ -117,6 +122,13 @@ fun CustomerListScreen(
                 onValueChange = { searchQuery = it },
                 label = { Text("Search by name, mobile, village...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear")
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp)
@@ -133,8 +145,20 @@ fun CustomerListScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(filteredCustomers) { customer ->
+                        val customerJobs = jobsState.value.filter { it.customerId == customer.customerId }
+                        val customerPayments = paymentsState.value.filter { it.customerId == customer.customerId }
+                        
+                        val totalBilled = if (customerJobs.isNotEmpty()) customerJobs.sumOf { it.finalAmount } else customer.totalAmount
+                        val totalPaid = customerPayments.sumOf { it.amount } + customerJobs.sumOf { it.paidAmount }
+                        val effectivePaid = maxOf(customer.paidAmount, totalPaid)
+                        val pendingDue = maxOf(0.0, totalBilled - effectivePaid)
+
                         CustomerCard(
                             customer = customer,
+                            totalJobsCount = maxOf(customerJobs.size, customer.totalJobs),
+                            totalBilled = totalBilled,
+                            totalPaid = effectivePaid,
+                            pendingDue = pendingDue,
                             onClick = { onNavigate(Screen.CustomerDetail.createRoute(customer.customerId)) }
                         )
                     }
@@ -142,17 +166,44 @@ fun CustomerListScreen(
             }
         }
 
+        // Add Customer Dialog without redundant address field
         if (showAddDialog) {
             AlertDialog(
                 onDismissRequest = { showAddDialog = false },
                 title = { Text("Add New Customer") },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Customer Name *") }, singleLine = true)
-                        OutlinedTextField(value = mobile, onValueChange = { mobile = it }, label = { Text("Mobile Number *") }, singleLine = true)
-                        OutlinedTextField(value = village, onValueChange = { village = it }, label = { Text("Village / Location") }, singleLine = true)
-                        OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Address") }, singleLine = true)
-                        OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes") })
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Customer Name *") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = mobile,
+                            onValueChange = { mobile = it },
+                            label = { Text("Mobile Number *") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = village,
+                            onValueChange = { village = it },
+                            label = { Text("Village / Location") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = notes,
+                            onValueChange = { notes = it },
+                            label = { Text("Notes (Optional)") },
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 },
                 confirmButton = {
@@ -163,7 +214,6 @@ fun CustomerListScreen(
                                 val existing = customersState.value.find { it.name.trim().equals(name.trim(), ignoreCase = true) }
                                 val customer = existing?.copy(
                                     mobile = mobile.trim(),
-                                    address = address.trim(),
                                     village = village.trim(),
                                     notes = notes.trim(),
                                     updatedAt = System.currentTimeMillis()
@@ -172,14 +222,12 @@ fun CustomerListScreen(
                                     userId = currentUserId,
                                     name = name.trim(),
                                     mobile = mobile.trim(),
-                                    address = address.trim(),
                                     village = village.trim(),
                                     notes = notes.trim()
                                 )
                                 repository.saveCustomer(customer)
                                 name = ""
                                 mobile = ""
-                                address = ""
                                 village = ""
                                 notes = ""
                                 showAddDialog = false
@@ -200,14 +248,22 @@ fun CustomerListScreen(
 }
 
 @Composable
-fun CustomerCard(customer: Customer, onClick: () -> Unit) {
+fun CustomerCard(
+    customer: Customer,
+    totalJobsCount: Int,
+    totalBilled: Double,
+    totalPaid: Double,
+    pendingDue: Double,
+    onClick: () -> Unit
+) {
     val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -215,9 +271,13 @@ fun CustomerCard(customer: Customer, onClick: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(customer.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("📞 ${customer.mobile} ${if (customer.village.isNotEmpty()) "• 📍 ${customer.village}" else ""}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = "📞 ${customer.mobile} ${if (customer.village.isNotEmpty()) "• 📍 ${customer.village}" else ""}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     IconButton(
@@ -231,27 +291,47 @@ fun CustomerCard(customer: Customer, onClick: () -> Unit) {
                     }
                     IconButton(
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=${customer.mobile}&text=Hello%20${customer.name},%20you%20have%20a%20pending%20balance%20of%20₹${customer.pendingAmount.toInt()}%20for%20Time%20Bill%20services."))
+                            val msg = "Hello ${customer.name}, your total bill is ₹${totalBilled.toInt()}, Total Paid: ₹${totalPaid.toInt()}, and Pending Due: ₹${pendingDue.toInt()} for Time Bill work. Thank you!"
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=${customer.mobile}&text=${Uri.encode(msg)}"))
                             context.startActivity(intent)
                         },
                         modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(Icons.Default.Chat, contentDescription = "WhatsApp", tint = MaterialTheme.colorScheme.secondary)
+                        Icon(Icons.Default.Chat, contentDescription = "WhatsApp", tint = Color(0xFF25D366))
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            Divider()
+            Spacer(modifier = Modifier.height(10.dp))
+            HorizontalDivider()
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Total Jobs: ${customer.totalJobs}", style = MaterialTheme.typography.bodySmall)
-                Text("Total: ₹${customer.totalAmount.toInt()}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
-                Text("Pending: ₹${customer.pendingAmount.toInt()}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = if (customer.pendingAmount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                Column {
+                    Text("Total Jobs", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("$totalJobsCount", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Total Billed", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("₹${totalBilled.toInt()}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Total Paid", style = MaterialTheme.typography.labelSmall, color = Color(0xFF16A34A))
+                    Text("₹${totalPaid.toInt()}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color(0xFF16A34A))
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Pending Dues", style = MaterialTheme.typography.labelSmall, color = if (pendingDue > 0) Color(0xFFDC2626) else Color(0xFF16A34A))
+                    Text(
+                        text = if (pendingDue > 0) "₹${pendingDue.toInt()}" else "✓ All Paid",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (pendingDue > 0) Color(0xFFDC2626) else Color(0xFF16A34A)
+                    )
+                }
             }
         }
     }

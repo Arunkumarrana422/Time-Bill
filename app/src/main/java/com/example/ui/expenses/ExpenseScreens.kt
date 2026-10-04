@@ -20,6 +20,7 @@ import com.example.data.repository.TimeBillRepository
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.round
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +43,7 @@ fun ExpenseListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("💸 Expenses (Total: ₹$totalExpenses)", fontWeight = FontWeight.Bold) },
+                title = { Text("💸 Expenses (Total: ₹${totalExpenses.toInt()})", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -86,7 +87,7 @@ fun ExpenseListScreen(
                                 Text(expense.description, style = MaterialTheme.typography.bodySmall)
                             }
                         }
-                        Text("-₹${expense.amount}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.error)
+                        Text("-₹${expense.amount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -107,7 +108,7 @@ fun ExpenseListScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            val amt = amount.toDoubleOrNull() ?: 0.0
+                            val amt = round(amount.toDoubleOrNull() ?: 0.0)
                             if (name.isBlank() || amt <= 0) return@Button
                             scope.launch {
                                 val expId = "exp_${System.currentTimeMillis()}"

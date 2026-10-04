@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
@@ -26,6 +27,7 @@ import com.example.ui.util.clearFocusOnTap
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.round
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +42,8 @@ fun ManualJobScreen(
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
 
     var selectedCustomer by remember { mutableStateOf<Customer?>(null) }
+    var customerSearchQuery by remember { mutableStateOf("") }
+
     var selectedService by remember { mutableStateOf<ServiceItem?>(null) }
     var date by remember { mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())) }
     var hours by remember { mutableStateOf("") }
@@ -81,17 +85,24 @@ fun ManualJobScreen(
         if (selectedService == null && servicesState.value.isNotEmpty()) {
             val first = servicesState.value.first()
             selectedService = first
-            rate = first.hourlyRate.toString()
+            rate = first.hourlyRate.toInt().toString()
         }
     }
 
     val hrs = hours.toDoubleOrNull() ?: 0.0
     val mins = minutes.toDoubleOrNull() ?: 0.0
     val totalMin = (hrs * 60 + mins).toInt()
-    val hourlyRate = rate.toDoubleOrNull() ?: 500.0
-    val baseAmt = (totalMin / 60.0) * hourlyRate
-    val addl = additionalCharges.toDoubleOrNull() ?: 0.0
+    val hourlyRate = round(rate.toDoubleOrNull() ?: 500.0)
+    val baseAmt = round((totalMin / 60.0) * hourlyRate)
+    val addl = round(additionalCharges.toDoubleOrNull() ?: 0.0)
     val finalAmt = maxOf(0.0, baseAmt + addl)
+
+    val matchingCustomers = customersState.value.filter {
+        customerSearchQuery.isBlank() ||
+                it.name.contains(customerSearchQuery, ignoreCase = true) ||
+                it.mobile.contains(customerSearchQuery) ||
+                it.village.contains(customerSearchQuery, ignoreCase = true)
+    }
 
     Scaffold(
         topBar = {
@@ -121,7 +132,7 @@ fun ManualJobScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // Customer Dropdown + Quick Add
+                    // Searchable Customer Dropdown + Quick Add
                     var customerExpanded by remember { mutableStateOf(false) }
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         ExposedDropdownMenuBox(
@@ -130,12 +141,29 @@ fun ManualJobScreen(
                             modifier = Modifier.weight(1f)
                         ) {
                             OutlinedTextField(
-                                value = selectedCustomer?.name ?: "",
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Customer *") },
-                                placeholder = { Text("Select Customer") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = customerExpanded) },
+                                value = if (customerSearchQuery.isNotEmpty()) customerSearchQuery else (selectedCustomer?.name ?: ""),
+                                onValueChange = { query ->
+                                    customerSearchQuery = query
+                                    selectedCustomer = customersState.value.find { it.name.equals(query.trim(), ignoreCase = true) }
+                                    customerExpanded = true
+                                },
+                                readOnly = false,
+                                singleLine = true,
+                                label = { Text("Customer *", maxLines = 1) },
+                                placeholder = { Text("Search customer...", maxLines = 1) },
+                                trailingIcon = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (customerSearchQuery.isNotEmpty() || selectedCustomer != null) {
+                                            IconButton(onClick = {
+                                                customerSearchQuery = ""
+                                                selectedCustomer = null
+                                            }) {
+                                                Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(20.dp))
+                                            }
+                                        }
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = customerExpanded)
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth().menuAnchor(),
                                 shape = RoundedCornerShape(12.dp)
                             )
@@ -143,27 +171,31 @@ fun ManualJobScreen(
                                 expanded = customerExpanded,
                                 onDismissRequest = { customerExpanded = false }
                             ) {
-                                if (customersState.value.isEmpty()) {
+                                if (matchingCustomers.isEmpty()) {
                                     DropdownMenuItem(
-                                        text = { Text("No customers found. Click + to add") },
+                                        text = { Text("No customer found matching '$customerSearchQuery'") },
                                         onClick = {
+                                            newCustomerName = customerSearchQuery
                                             customerExpanded = false
                                             showAddCustomerDialog = true
                                         }
                                     )
                                 } else {
-                                    customersState.value.forEach { customer ->
+                                    matchingCustomers.forEach { customer ->
                                         DropdownMenuItem(
                                             text = {
                                                 Column {
                                                     Text(customer.name, fontWeight = FontWeight.SemiBold)
-                                                    if (customer.mobile.isNotBlank()) {
-                                                        Text(customer.mobile, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                    }
+                                                    Text(
+                                                        text = "📞 ${customer.mobile} ${if (customer.village.isNotEmpty()) "• 📍 ${customer.village}" else ""}",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
                                                 }
                                             },
                                             onClick = {
                                                 selectedCustomer = customer
+                                                customerSearchQuery = customer.name
                                                 customerExpanded = false
                                             }
                                         )
@@ -201,8 +233,9 @@ fun ManualJobScreen(
                                 value = selectedService?.name ?: "",
                                 onValueChange = {},
                                 readOnly = true,
-                                label = { Text("Service *") },
-                                placeholder = { Text("Select Service") },
+                                singleLine = true,
+                                label = { Text("Service *", maxLines = 1) },
+                                placeholder = { Text("Select Service", maxLines = 1) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = serviceExpanded) },
                                 modifier = Modifier.fillMaxWidth().menuAnchor(),
                                 shape = RoundedCornerShape(12.dp)
@@ -225,7 +258,7 @@ fun ManualJobScreen(
                                         },
                                         onClick = {
                                             selectedService = service
-                                            rate = service.hourlyRate.toString()
+                                            rate = service.hourlyRate.toInt().toString()
                                             serviceExpanded = false
                                         }
                                     )
@@ -256,7 +289,8 @@ fun ManualJobScreen(
                             onValueChange = {},
                             readOnly = true,
                             enabled = false,
-                            label = { Text("Date (YYYY-MM-DD)") },
+                            singleLine = true,
+                            label = { Text("Date (YYYY-MM-DD)", maxLines = 1) },
                             trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Pick Date") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -330,7 +364,7 @@ fun ManualJobScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Grand Total:", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Text("₹${String.format(Locale.getDefault(), "%.2f", finalAmt)}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("₹${finalAmt.toLong()}", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -410,7 +444,7 @@ fun ManualJobScreen(
             }
         }
 
-        // Quick Add Customer Dialog
+        // Quick Add Customer Dialog (without address field)
         if (showAddCustomerDialog) {
             AlertDialog(
                 onDismissRequest = { showAddCustomerDialog = false },
@@ -436,7 +470,7 @@ fun ManualJobScreen(
                         OutlinedTextField(
                             value = newCustomerVillage,
                             onValueChange = { newCustomerVillage = it },
-                            label = { Text("Village / Address") },
+                            label = { Text("Village / Location") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp)
@@ -462,6 +496,7 @@ fun ManualJobScreen(
                                     )
                                     repository.saveCustomer(newCust)
                                     selectedCustomer = newCust
+                                    customerSearchQuery = newCust.name
                                     newCustomerName = ""
                                     newCustomerMobile = ""
                                     newCustomerVillage = ""
@@ -510,17 +545,18 @@ fun ManualJobScreen(
                     Button(
                         onClick = {
                             if (newServiceName.isNotBlank()) {
-                                val sRate = newServiceRate.toDoubleOrNull() ?: 500.0
+                                val sRate = round(newServiceRate.toDoubleOrNull() ?: 500.0)
                                 scope.launch {
                                     val newSrv = ServiceItem(
                                         serviceId = "srv_${System.currentTimeMillis()}",
                                         userId = currentUserId,
                                         name = newServiceName.trim(),
-                                        hourlyRate = sRate
+                                        hourlyRate = sRate,
+                                        minuteRate = sRate / 60.0
                                     )
                                     repository.saveService(newSrv)
                                     selectedService = newSrv
-                                    rate = sRate.toString()
+                                    rate = sRate.toInt().toString()
                                     newServiceName = ""
                                     showAddServiceDialog = false
                                 }
