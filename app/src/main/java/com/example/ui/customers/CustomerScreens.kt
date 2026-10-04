@@ -340,11 +340,7 @@ fun CustomerCard(
     
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            ),
+            .fillMaxWidth(),
         shape = cardShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -352,7 +348,15 @@ fun CustomerCard(
         border = if (isSelected) BorderStroke(2.dp, Color.Gray) else null,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Box(
+            modifier = Modifier
+                .clip(cardShape)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -448,6 +452,7 @@ fun CustomerCard(
                         color = if (pendingDue > 0) Color(0xFFDC2626) else Color(0xFF16A34A)
                     )
                 }
+            }
             }
         }
     }
