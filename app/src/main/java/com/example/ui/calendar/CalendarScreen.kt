@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,15 +61,19 @@ fun CalendarScreen(
                 shape = RoundedCornerShape(12.dp)
             )
 
+            val summaryCardShape = RoundedCornerShape(14.dp)
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(summaryCardShape),
+                shape = summaryCardShape,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Date: $selectedDate", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Jobs: ${jobsForDate.size} • Hours: ${dayMinutes / 60}h ${dayMinutes % 60}m • Earnings: ₹$dayEarnings")
+                    Text("Jobs: ${jobsForDate.size} • Hours: ${dayMinutes / 60}h ${dayMinutes % 60}m • Earnings: ₹${dayEarnings.toInt()}")
                 }
             }
 
@@ -76,9 +81,14 @@ fun CalendarScreen(
 
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(jobsForDate) { job ->
+                    val jobCardShape = RoundedCornerShape(12.dp)
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(jobCardShape),
+                        shape = jobCardShape,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -88,7 +98,7 @@ fun CalendarScreen(
                                 Text(job.customerName, fontWeight = FontWeight.Bold)
                                 Text("${job.serviceName} (${job.billableDurationMinutes / 60}h)", style = MaterialTheme.typography.bodySmall)
                             }
-                            Text("₹${job.finalAmount}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }

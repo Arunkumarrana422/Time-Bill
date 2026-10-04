@@ -3,7 +3,6 @@ package com.example.ui.jobs
 import androidx.activity.compose.BackHandler
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,18 +13,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Job
-import com.example.data.model.Payment
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.navigation.Screen
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -134,11 +130,13 @@ fun JobListScreen(
 @Composable
 fun JobCard(job: Job, onClick: () -> Unit) {
     val isPaid = job.paymentStatus == "Paid" || job.pendingAmount <= 0
+    val cardShape = RoundedCornerShape(14.dp)
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(14.dp),
+            .clip(cardShape),
+        shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -199,14 +197,7 @@ fun JobDetailScreen(
 ) {
     val context = LocalContext.current
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
-    val customersState = repository.observeCustomers(currentUserId).collectAsState(initial = emptyList())
     val job = jobsState.value.find { h -> h.jobId == jobId }
-
-    var showPaymentDialog by remember { mutableStateOf(false) }
-    var paymentAmount by remember { mutableStateOf(job?.pendingAmount?.toInt()?.toString() ?: "0") }
-    var paymentMethod by remember { mutableStateOf("Cash") }
-
-    val scope = rememberCoroutineScope()
 
     if (job == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -296,107 +287,9 @@ fun JobDetailScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-
-                        if (job.pendingAmount > 0) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(
-                                onClick = {
-                                    paymentAmount = job.pendingAmount.toInt().toString()
-                                    showPaymentDialog = true
-                                },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("Record Payment for this Job")
-                            }
-                        }
                     }
                 }
             }
-        }
-
-        if (showPaymentDialog) {
-            AlertDialog(
-                onDismissRequest = { showPaymentDialog = false },
-                title = { Text("Record Payment for ${job.serviceName}") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedTextField(
-                            value = paymentAmount,
-                            onValueChange = { paymentAmount = it },
-                            label = { Text("Amount (₹)") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = paymentMethod,
-                            onValueChange = { paymentMethod = it },
-                            label = { Text("Method (Cash, UPI, Bank)") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val amt = paymentAmount.toDoubleOrNull() ?: 0.0
-                            if (amt <= 0) return@Button
-                            scope.launch {
-                                val paymentId = "pay_${System.currentTimeMillis()}"
-                                val payment = Payment(
-                                    paymentId = paymentId,
-                                    userId = currentUserId,
-                                    customerId = job.customerId,
-                                    customerName = job.customerName,
-                                    jobId = job.jobId,
-                                    amount = amt,
-                                    method = paymentMethod,
-                                    date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
-                                    notes = "Payment for ${job.serviceName}"
-                                )
-                                repository.savePayment(payment)
-
-                                val newPaid = job.paidAmount + amt
-                                val newPending = maxOf(0.0, job.finalAmount - newPaid)
-                                val newStatus = if (newPending <= 0) "Paid" else "Partially Paid"
-
-                                val updatedJob = job.copy(
-                                    paidAmount = newPaid,
-                                    pendingAmount = newPending,
-                                    paymentStatus = newStatus
-                                )
-                                repository.saveJob(updatedJob)
-
-                                // Update Customer entity totals
-                                val customer = customersState.value.find { it.customerId == job.customerId }
-                                if (customer != null) {
-                                    val newCustPaid = customer.paidAmount + amt
-                                    val newCustPending = maxOf(0.0, customer.totalAmount - newCustPaid)
-                                    repository.saveCustomer(
-                                        customer.copy(
-                                            paidAmount = newCustPaid,
-                                            pendingAmount = newCustPending,
-                                            updatedAt = System.currentTimeMillis()
-                                        )
-                                    )
-                                }
-
-                                showPaymentDialog = false
-                            }
-                        }
-                    ) {
-                        Text("Save Payment")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showPaymentDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
         }
     }
 }

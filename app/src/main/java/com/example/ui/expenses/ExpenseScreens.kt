@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,17 +34,16 @@ fun ExpenseListScreen(
     var showAddDialog by remember { mutableStateOf(false) }
 
     var name by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("Fuel") }
+    var category by remember { mutableStateOf("Fuel / Diesel") }
     var amount by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
-    val totalExpenses = expensesState.value.sumOf { it.amount }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("💸 Expenses (Total: ₹${totalExpenses.toInt()})", fontWeight = FontWeight.Bold) },
+                title = { Text("⛽ Expenses Manager", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -70,10 +70,14 @@ fun ExpenseListScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(expensesState.value) { expense ->
+                val expenseCardShape = RoundedCornerShape(14.dp)
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(expenseCardShape),
+                    shape = expenseCardShape,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -96,13 +100,40 @@ fun ExpenseListScreen(
         if (showAddDialog) {
             AlertDialog(
                 onDismissRequest = { showAddDialog = false },
-                title = { Text("Add Business Expense") },
+                title = { Text("Add Business Expense", fontWeight = FontWeight.Bold) },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Expense Name * (e.g. Diesel)") }, singleLine = true)
-                        OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category (Fuel, Repair, Maintenance)") }, singleLine = true)
-                        OutlinedTextField(value = amount, onValueChange = { amount = it }, label = { Text("Amount (₹) *") }, singleLine = true)
-                        OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") })
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Expense Name * (e.g. Diesel)") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = category,
+                            onValueChange = { category = it },
+                            label = { Text("Category (Fuel, Repair, Maintenance)") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = amount,
+                            onValueChange = { amount = it },
+                            label = { Text("Amount (₹) *") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            label = { Text("Description") },
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 },
                 confirmButton = {
@@ -115,13 +146,16 @@ fun ExpenseListScreen(
                                 val expense = Expense(
                                     expenseId = expId,
                                     userId = currentUserId,
-                                    name = name,
-                                    category = category,
+                                    name = name.trim(),
+                                    category = category.trim(),
                                     amount = amt,
                                     date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
-                                    description = description
+                                    description = description.trim()
                                 )
                                 repository.saveExpense(expense)
+                                name = ""
+                                amount = ""
+                                description = ""
                                 showAddDialog = false
                             }
                         }

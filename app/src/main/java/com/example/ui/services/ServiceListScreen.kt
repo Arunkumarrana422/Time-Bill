@@ -9,11 +9,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,17 +75,20 @@ fun ServiceListScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(servicesState.value) { service ->
+                val cardShape = RoundedCornerShape(14.dp)
                 Card(
+                    onClick = {
+                        editingService = service
+                        editName = service.name
+                        editDescription = service.description
+                        editHourlyRate = service.hourlyRate.toInt().toString()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            editingService = service
-                            editName = service.name
-                            editDescription = service.description
-                            editHourlyRate = service.hourlyRate.toInt().toString()
-                        },
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        .clip(cardShape),
+                    shape = cardShape,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -108,12 +113,33 @@ fun ServiceListScreen(
         if (showAddDialog) {
             AlertDialog(
                 onDismissRequest = { showAddDialog = false },
-                title = { Text("Add Service") },
+                title = { Text("Add Service", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Service Name *") }, singleLine = true)
-                        OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") }, singleLine = true)
-                        OutlinedTextField(value = hourlyRate, onValueChange = { hourlyRate = it }, label = { Text("Hourly Rate (₹) *") }, singleLine = true)
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Service Name *") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            label = { Text("Description") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = hourlyRate,
+                            onValueChange = { hourlyRate = it },
+                            label = { Text("Hourly Rate (₹) *") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 },
                 confirmButton = {
@@ -126,8 +152,8 @@ fun ServiceListScreen(
                                 val service = ServiceItem(
                                     serviceId = srvId,
                                     userId = currentUserId,
-                                    name = name,
-                                    description = description,
+                                    name = name.trim(),
+                                    description = description.trim(),
                                     hourlyRate = hr,
                                     minuteRate = hr / 60.0,
                                     isActive = true
@@ -139,7 +165,7 @@ fun ServiceListScreen(
                             }
                         }
                     ) {
-                        Text("Save Service")
+                        Text("Add")
                     }
                 },
                 dismissButton = {
@@ -153,32 +179,53 @@ fun ServiceListScreen(
         if (editingService != null) {
             AlertDialog(
                 onDismissRequest = { editingService = null },
-                title = { Text("Edit Service & Price") },
+                title = { Text("Edit Service", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(value = editName, onValueChange = { editName = it }, label = { Text("Service Name *") }, singleLine = true)
-                        OutlinedTextField(value = editDescription, onValueChange = { editDescription = it }, label = { Text("Description") }, singleLine = true)
-                        OutlinedTextField(value = editHourlyRate, onValueChange = { editHourlyRate = it }, label = { Text("Hourly Rate (₹) *") }, singleLine = true)
+                        OutlinedTextField(
+                            value = editName,
+                            onValueChange = { editName = it },
+                            label = { Text("Service Name *") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editDescription,
+                            onValueChange = { editDescription = it },
+                            label = { Text("Description") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editHourlyRate,
+                            onValueChange = { editHourlyRate = it },
+                            label = { Text("Hourly Rate (₹) *") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 },
                 confirmButton = {
                     Button(
                         onClick = {
                             if (editName.isBlank()) return@Button
-                            val hr = editHourlyRate.toDoubleOrNull() ?: editingService!!.hourlyRate
-                            val updated = editingService!!.copy(
-                                name = editName.trim(),
-                                description = editDescription.trim(),
-                                hourlyRate = hr,
-                                minuteRate = hr / 60.0
-                            )
                             scope.launch {
+                                val hr = editHourlyRate.toDoubleOrNull() ?: 500.0
+                                val updated = editingService!!.copy(
+                                    name = editName.trim(),
+                                    description = editDescription.trim(),
+                                    hourlyRate = hr,
+                                    minuteRate = hr / 60.0
+                                )
                                 repository.saveService(updated)
                                 editingService = null
                             }
                         }
                     ) {
-                        Text("Update Service")
+                        Text("Save")
                     }
                 },
                 dismissButton = {

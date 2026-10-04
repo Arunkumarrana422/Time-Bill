@@ -89,7 +89,8 @@ class MainActivity : ComponentActivity() {
                             currentUser?.uid?.let { uid ->
                                 scope.launch {
                                     try {
-                                        // Silent sync and profile load
+                                        // Start realtime listener for profile
+                                        repository.startRealtimeProfileListener(uid, scope)
                                         repository.syncDataFromFirestore(uid)
                                         repository.seedDefaultServicesIfNeeded(uid)
                                         val profile = repository.getUser(uid)

@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,26 +29,26 @@ fun SetupScreen(
 
     var name by remember(initialProfile, firebaseUser) { 
         mutableStateOf(
-            initialProfile?.name?.takeIf { !it.isBlank() } 
-                ?: firebaseUser?.displayName?.takeIf { !it.isBlank() } 
+            initialProfile?.name?.takeIf { it.isNotBlank() } 
+                ?: firebaseUser?.displayName?.takeIf { it.isNotBlank() } 
                 ?: ""
         ) 
     }
     var businessName by remember(initialProfile) { 
         mutableStateOf(
-            initialProfile?.businessName?.takeIf { !it.isBlank() } ?: ""
+            initialProfile?.businessName?.takeIf { it.isNotBlank() } ?: ""
         ) 
     }
     var mobile by remember(initialProfile, firebaseUser) { 
         mutableStateOf(
-            initialProfile?.mobile?.takeIf { !it.isBlank() } 
-                ?: firebaseUser?.phoneNumber?.takeIf { !it.isBlank() } 
+            initialProfile?.mobile?.takeIf { it.isNotBlank() } 
+                ?: firebaseUser?.phoneNumber?.takeIf { it.isNotBlank() } 
                 ?: ""
         ) 
     }
     var address by remember(initialProfile) { mutableStateOf(initialProfile?.address ?: "") }
     var currency by remember(initialProfile) { mutableStateOf(initialProfile?.currency ?: "₹") }
-    var defaultRate by remember { mutableStateOf(initialProfile?.defaultRate?.toString() ?: "500") }
+    var defaultRate by remember { mutableStateOf(initialProfile?.defaultRate?.toInt()?.toString() ?: "500") }
     var defaultService by remember { mutableStateOf(initialProfile?.defaultService ?: "Tractor Ploughing") }
     var invoicePrefix by remember { mutableStateOf(initialProfile?.invoicePrefix ?: "INV") }
     var paymentTerms by remember { mutableStateOf(initialProfile?.paymentTerms ?: "Due on receipt") }
@@ -94,9 +95,12 @@ fun SetupScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            val setupCardShape = RoundedCornerShape(18.dp)
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(setupCardShape),
+                shape = setupCardShape,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
@@ -158,7 +162,7 @@ fun SetupScreen(
                         OutlinedTextField(
                             value = defaultRate,
                             onValueChange = { defaultRate = it },
-                            label = { Text("Default Hourly Rate") },
+                            label = { Text("Hourly Rate (₹)") },
                             modifier = Modifier.weight(2f),
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp)

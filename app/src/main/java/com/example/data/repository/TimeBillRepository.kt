@@ -9,8 +9,11 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
@@ -25,6 +28,7 @@ class TimeBillRepository(private val context: Context) {
     }
     private val appDb = AppDatabase.getDatabase(context)
     private val auth by lazy { Firebase.auth }
+    private var profileListener: ListenerRegistration? = null
 
     private fun requireUserId(): String {
         return auth.currentUser?.uid ?: "local_offline_user"
@@ -39,19 +43,64 @@ class TimeBillRepository(private val context: Context) {
         }
     }
 
+    suspend fun fetchAndCacheUserProfile(userId: String): UserProfile? {
+        if (userId.isEmpty() || userId == "local_offline_user") return null
+        return withContext(Dispatchers.IO) {
+            try {
+                val doc = db.collection("users").document(userId).get().await()
+                if (doc.exists()) {
+                    val profile = doc.toObject(UserProfile::class.java)
+                    if (profile != null) {
+                        appDb.userDao().insertUser(profile)
+                        return@withContext profile
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("Repo", "fetchAndCacheUserProfile error: ${e.message}")
+            }
+            null
+        }
+    }
+
     suspend fun saveUserProfile(profile: UserProfile) {
         withContext(Dispatchers.IO) {
-            appDb.userDao().insertUser(profile)
-            val uid = auth.currentUser?.uid ?: profile.userId
+            val uid = if (profile.userId.isNotBlank()) profile.userId else auth.currentUser?.uid ?: "local_offline_user"
+            val cleanProfile = profile.copy(userId = uid)
+            appDb.userDao().insertUser(cleanProfile)
             if (uid.isNotEmpty() && uid != "local_offline_user") {
                 try {
-                    db.collection("users").document(uid).set(profile).addOnFailureListener {
-                        Log.e("Repo", "Failed to sync user profile to Firestore", it)
-                    }
+                    db.collection("users").document(uid).set(cleanProfile).await()
+                    Log.d("Repo", "User profile synced successfully to Firestore for $uid")
                 } catch (e: Exception) {
-                    Log.e("Repo", "Firestore sync exception", e)
+                    Log.e("Repo", "Firestore sync exception for user profile", e)
+                    try {
+                        db.collection("users").document(uid).set(cleanProfile)
+                    } catch (_: Exception) {}
                 }
             }
+        }
+    }
+
+    fun startRealtimeProfileListener(userId: String, scope: CoroutineScope) {
+        if (userId.isEmpty() || userId == "local_offline_user") return
+        profileListener?.remove()
+        try {
+            profileListener = db.collection("users").document(userId).addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("Repo", "Realtime user profile listener error", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null && snapshot.exists()) {
+                    val profile = snapshot.toObject(UserProfile::class.java)
+                    if (profile != null) {
+                        scope.launch(Dispatchers.IO) {
+                            appDb.userDao().insertUser(profile)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("Repo", "Failed to start user profile listener", e)
         }
     }
 
@@ -100,6 +149,7 @@ class TimeBillRepository(private val context: Context) {
                 try {
                     db.collection("users").document(uid).collection("services").document(service.serviceId)
                         .set(service)
+                        .addOnFailureListener { Log.e("Repo", "Sync service failed", it) }
                 } catch (e: Exception) {
                     Log.e("Repo", "Service sync exception", e)
                 }
@@ -107,23 +157,14 @@ class TimeBillRepository(private val context: Context) {
         }
     }
 
-    suspend fun deleteService(service: ServiceItem) {
-        withContext(Dispatchers.IO) {
-            appDb.serviceDao().deleteService(service)
-            val uid = requireUserId()
-            if (uid != "local_offline_user") {
-                try {
-                    db.collection("users").document(uid).collection("services").document(service.serviceId)
-                        .delete()
-                } catch (e: Exception) {
-                    Log.e("Repo", "Delete service exception", e)
-                }
-            }
-        }
-    }
-
     // Jobs
     fun observeJobs(userId: String): Flow<List<Job>> = appDb.jobDao().observeJobs(userId)
+
+    suspend fun getJob(jobId: String): Job? {
+        return withContext(Dispatchers.IO) {
+            appDb.jobDao().getJobById(jobId)
+        }
+    }
 
     suspend fun saveJob(job: Job) {
         withContext(Dispatchers.IO) {
@@ -133,6 +174,7 @@ class TimeBillRepository(private val context: Context) {
                 try {
                     db.collection("users").document(uid).collection("jobs").document(job.jobId)
                         .set(job)
+                        .addOnFailureListener { Log.e("Repo", "Sync job failed", it) }
                 } catch (e: Exception) {
                     Log.e("Repo", "Job sync exception", e)
                 }
@@ -166,6 +208,7 @@ class TimeBillRepository(private val context: Context) {
                 try {
                     db.collection("users").document(uid).collection("payments").document(payment.paymentId)
                         .set(payment)
+                        .addOnFailureListener { Log.e("Repo", "Sync payment failed", it) }
                 } catch (e: Exception) {
                     Log.e("Repo", "Payment sync exception", e)
                 }
@@ -199,6 +242,7 @@ class TimeBillRepository(private val context: Context) {
                 try {
                     db.collection("users").document(uid).collection("expenses").document(expense.expenseId)
                         .set(expense)
+                        .addOnFailureListener { Log.e("Repo", "Sync expense failed", it) }
                 } catch (e: Exception) {
                     Log.e("Repo", "Expense sync exception", e)
                 }
@@ -294,7 +338,7 @@ class TimeBillRepository(private val context: Context) {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("Repo", "Error syncing data from Firestore", e)
+                Log.e("Repo", "Error syncing data from Firestore: ${e.message}", e)
             }
         }
     }

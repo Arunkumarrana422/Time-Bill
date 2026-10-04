@@ -241,9 +241,12 @@ fun DashboardScreen(
 
                 if (jobsState.value.isEmpty()) {
                     item {
+                        val emptyCardShape = RoundedCornerShape(14.dp)
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(emptyCardShape),
+                            shape = emptyCardShape
                         ) {
                             Column(
                                 modifier = Modifier.padding(24.dp).fillMaxWidth(),
@@ -251,7 +254,10 @@ fun DashboardScreen(
                             ) {
                                 Text("No jobs recorded yet.", style = MaterialTheme.typography.bodyLarge)
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Button(onClick = { onNavigate(Screen.Timer.route) }) {
+                                Button(
+                                    onClick = { onNavigate(Screen.Timer.route) },
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
                                     Text("Start Your First Job")
                                 }
                             }
@@ -259,12 +265,15 @@ fun DashboardScreen(
                     }
                 } else {
                     items(jobsState.value.take(5)) { job ->
+                        val jobCardShape = RoundedCornerShape(14.dp)
                         Card(
+                            onClick = { onNavigate(Screen.JobDetail.createRoute(job.jobId)) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onNavigate(Screen.JobDetail.createRoute(job.jobId)) },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                .clip(jobCardShape),
+                            shape = jobCardShape,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -301,7 +310,7 @@ fun DashboardScreen(
             }
         }
 
-        // Floating Animated Pill Banner overlaying on top without affecting theme/layout
+        // Floating Animated Pill Banner
         AnimatedVisibility(
             visible = showExitBanner,
             modifier = Modifier
@@ -362,10 +371,12 @@ fun MetricCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     containerColor: androidx.compose.ui.graphics.Color
 ) {
+    val cardShape = RoundedCornerShape(16.dp)
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
+        modifier = modifier.clip(cardShape),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -392,17 +403,18 @@ fun RowScope.QuickActionButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit
 ) {
+    val buttonShape = RoundedCornerShape(12.dp)
     Column(
         modifier = Modifier
             .weight(1f)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(buttonShape)
             .clickable { onClick() }
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Surface(
             modifier = Modifier.size(48.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = buttonShape,
             color = MaterialTheme.colorScheme.surfaceVariant
         ) {
             Box(contentAlignment = Alignment.Center) {
