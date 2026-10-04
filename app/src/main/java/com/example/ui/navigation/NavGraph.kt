@@ -1,5 +1,7 @@
 package com.example.ui.navigation
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -9,28 +11,24 @@ import androidx.navigation.navArgument
 import com.example.data.model.UserProfile
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.auth.AuthScreen
-import com.example.ui.setup.SetupScreen
-import com.example.ui.onboarding.OnboardingScreen
-import com.example.ui.dashboard.DashboardScreen
-import com.example.ui.timer.TimerScreen
-import com.example.ui.timer.ManualJobScreen
-import com.example.ui.customers.CustomerListScreen
-import com.example.ui.customers.CustomerDetailScreen
+import com.example.ui.calendar.CalendarScreen
 import com.example.ui.customers.AddCustomerScreen
+import com.example.ui.customers.CustomerDetailScreen
+import com.example.ui.expenses.ExpenseListScreen
+import com.example.ui.jobs.JobDetailScreen
+import com.example.ui.onboarding.OnboardingScreen
+import com.example.ui.payments.PaymentListScreen
 import com.example.ui.payments.ReceivePaymentScreen
 import com.example.ui.services.ServiceListScreen
-import com.example.ui.jobs.JobListScreen
-import com.example.ui.jobs.JobDetailScreen
-import com.example.ui.payments.PaymentListScreen
-import com.example.ui.expenses.ExpenseListScreen
-import com.example.ui.reports.ReportsScreen
-import com.example.ui.calendar.CalendarScreen
-import com.example.ui.settings.SettingsScreen
+import com.example.ui.setup.SetupScreen
+import com.example.ui.timer.ManualJobScreen
+import com.example.ui.timer.TimerScreen
 
 sealed class Screen(val route: String) {
     object Onboarding : Screen("onboarding")
     object Auth : Screen("auth")
     object Setup : Screen("setup")
+    object MainTabs : Screen("main_tabs")
     object Dashboard : Screen("dashboard")
     object Timer : Screen("timer")
     object ManualJob : Screen("manual_job")
@@ -62,12 +60,45 @@ fun TimeBillNavGraph(
     userProfile: UserProfile?,
     onSignOut: () -> Unit
 ) {
-    val startRoute = Screen.Dashboard.route
+    val startRoute = Screen.MainTabs.route
 
     NavHost(
         navController = navController,
-        startDestination = startRoute
+        startDestination = startRoute,
+        enterTransition = {
+            slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(300)
+            ) + fadeIn(animationSpec = tween(300))
+        },
+        exitTransition = {
+            slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(300)
+            ) + fadeOut(animationSpec = tween(300))
+        },
+        popEnterTransition = {
+            slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(300)
+            ) + fadeIn(animationSpec = tween(300))
+        },
+        popExitTransition = {
+            slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(300)
+            ) + fadeOut(animationSpec = tween(300))
+        }
     ) {
+        composable(Screen.MainTabs.route) {
+            MainTabContainerScreen(
+                currentUserId = currentUserId,
+                repository = repository,
+                initialTab = 0,
+                onNavigate = { route -> navController.navigate(route) },
+                onSignOut = onSignOut
+            )
+        }
         composable(Screen.Onboarding.route) {
             OnboardingScreen(
                 onFinish = { navController.navigate(Screen.Setup.route) { popUpTo(Screen.Onboarding.route) { inclusive = true } } }
@@ -76,7 +107,7 @@ fun TimeBillNavGraph(
         composable(Screen.Auth.route) {
             AuthScreen(
                 onAuthSuccess = {
-                    navController.navigate(Screen.Dashboard.route) { popUpTo(Screen.Auth.route) { inclusive = true } }
+                    navController.navigate(Screen.MainTabs.route) { popUpTo(Screen.Auth.route) { inclusive = true } }
                 }
             )
         }
@@ -85,15 +116,8 @@ fun TimeBillNavGraph(
                 currentUserId = currentUserId,
                 initialProfile = userProfile,
                 onSaveComplete = { profile ->
-                    navController.navigate(Screen.Dashboard.route) { popUpTo(Screen.Setup.route) { inclusive = true } }
+                    navController.navigate(Screen.MainTabs.route) { popUpTo(Screen.Setup.route) { inclusive = true } }
                 }
-            )
-        }
-        composable(Screen.Dashboard.route) {
-            DashboardScreen(
-                currentUserId = currentUserId,
-                repository = repository,
-                onNavigate = { route -> navController.navigate(route) }
             )
         }
         composable(Screen.Timer.route) {
@@ -108,14 +132,6 @@ fun TimeBillNavGraph(
                 currentUserId = currentUserId,
                 repository = repository,
                 onFinish = { navController.popBackStack() }
-            )
-        }
-        composable(Screen.Customers.route) {
-            CustomerListScreen(
-                currentUserId = currentUserId,
-                repository = repository,
-                onNavigate = { route -> navController.navigate(route) },
-                onBack = { navController.popBackStack() }
             )
         }
         composable(Screen.AddCustomer.route) {
@@ -160,14 +176,6 @@ fun TimeBillNavGraph(
                 onBack = { navController.popBackStack() }
             )
         }
-        composable(Screen.Jobs.route) {
-            JobListScreen(
-                currentUserId = currentUserId,
-                repository = repository,
-                onNavigate = { route -> navController.navigate(route) },
-                onBack = { navController.popBackStack() }
-            )
-        }
         composable(Screen.JobDetail.route) { backStackEntry ->
             val jobId = backStackEntry.arguments?.getString("jobId") ?: ""
             JobDetailScreen(
@@ -192,27 +200,10 @@ fun TimeBillNavGraph(
                 onBack = { navController.popBackStack() }
             )
         }
-        composable(Screen.Reports.route) {
-            ReportsScreen(
-                currentUserId = currentUserId,
-                repository = repository,
-                onNavigate = { route -> navController.navigate(route) },
-                onBack = { navController.popBackStack() }
-            )
-        }
         composable(Screen.Calendar.route) {
             CalendarScreen(
                 currentUserId = currentUserId,
                 repository = repository,
-                onBack = { navController.popBackStack() }
-            )
-        }
-        composable(Screen.Settings.route) {
-            SettingsScreen(
-                currentUserId = currentUserId,
-                repository = repository,
-                onNavigate = { route -> navController.navigate(route) },
-                onSignOut = onSignOut,
                 onBack = { navController.popBackStack() }
             )
         }

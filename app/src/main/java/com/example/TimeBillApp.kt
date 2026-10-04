@@ -9,6 +9,11 @@ class TimeBillApp : Application() {
     override fun onCreate() {
         super.onCreate()
         initFirebase()
+        try {
+            com.example.service.TimerStateManager.restoreFromPrefsIfNeeded(this)
+        } catch (e: Exception) {
+            Log.e("TimeBillApp", "Timer restore error: ${e.message}")
+        }
     }
 
     private fun initFirebase() {

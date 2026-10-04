@@ -34,6 +34,7 @@ import java.util.*
 fun DashboardScreen(
     currentUserId: String,
     repository: TimeBillRepository,
+    showBottomBar: Boolean = true,
     onNavigate: (String) -> Unit
 ) {
     val context = LocalContext.current
@@ -41,16 +42,18 @@ fun DashboardScreen(
     var showExitBanner by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    BackHandler {
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - backPressedTime < 2000L) {
-            (context as? android.app.Activity)?.finish()
-        } else {
-            backPressedTime = currentTime
-            showExitBanner = true
-            scope.launch {
-                delay(2000L)
-                showExitBanner = false
+    if (showBottomBar) {
+        BackHandler {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - backPressedTime < 2000L) {
+                (context as? android.app.Activity)?.finish()
+            } else {
+                backPressedTime = currentTime
+                showExitBanner = true
+                scope.launch {
+                    delay(2000L)
+                    showExitBanner = false
+                }
             }
         }
     }
@@ -58,6 +61,9 @@ fun DashboardScreen(
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
     val customersState = repository.observeCustomers(currentUserId).collectAsState(initial = emptyList())
     val paymentsState = repository.observePayments(currentUserId).collectAsState(initial = emptyList())
+
+    val activeTimerData by com.example.service.TimerStateManager.timerData.collectAsState()
+    val liveTimerSeconds by com.example.service.TimerStateManager.elapsedSeconds.collectAsState()
 
     val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
     val currentMonthStr = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date())
@@ -93,37 +99,39 @@ fun DashboardScreen(
                 )
             },
             bottomBar = {
-                NavigationBar {
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                        label = { Text("Home") },
-                        selected = true,
-                        onClick = {}
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Work, contentDescription = null) },
-                        label = { Text("Jobs") },
-                        selected = false,
-                        onClick = { onNavigate(Screen.Jobs.route) }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.People, contentDescription = null) },
-                        label = { Text("Customers") },
-                        selected = false,
-                        onClick = { onNavigate(Screen.Customers.route) }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
-                        label = { Text("Reports") },
-                        selected = false,
-                        onClick = { onNavigate(Screen.Reports.route) }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Menu, contentDescription = null) },
-                        label = { Text("More") },
-                        selected = false,
-                        onClick = { onNavigate(Screen.Settings.route) }
-                    )
+                if (showBottomBar) {
+                    NavigationBar {
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                            label = { Text("Home") },
+                            selected = true,
+                            onClick = {}
+                        )
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Default.Work, contentDescription = null) },
+                            label = { Text("Jobs") },
+                            selected = false,
+                            onClick = { onNavigate(Screen.Jobs.route) }
+                        )
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Default.People, contentDescription = null) },
+                            label = { Text("Customers") },
+                            selected = false,
+                            onClick = { onNavigate(Screen.Customers.route) }
+                        )
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
+                            label = { Text("Reports") },
+                            selected = false,
+                            onClick = { onNavigate(Screen.Reports.route) }
+                        )
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Default.Menu, contentDescription = null) },
+                            label = { Text("More") },
+                            selected = false,
+                            onClick = { onNavigate(Screen.Settings.route) }
+                        )
+                    }
                 }
             }
         ) { padding ->
@@ -183,6 +191,69 @@ fun DashboardScreen(
                     }
                 }
 
+                // Live Active Timer Banner
+                if (activeTimerData.isRunning) {
+                    item {
+                        val hours = liveTimerSeconds / 3600
+                        val minutes = (liveTimerSeconds % 3600) / 60
+                        val seconds = liveTimerSeconds % 60
+                        val timeFormatted = String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
+                        val liveAmount = ((liveTimerSeconds / 3600.0) * activeTimerData.hourlyRate).toInt()
+
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onNavigate(Screen.Timer.route) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .padding(14.dp)
+                                    .fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Timelapse,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "⏱️ ${activeTimerData.customer?.name ?: "Customer"} ($timeFormatted)",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                        Text(
+                                            text = "${activeTimerData.service?.name ?: "Work"} • ₹$liveAmount (${if (activeTimerData.isPaused) "Paused" else "Running"})",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                                        )
+                                    }
+                                }
+                                Button(
+                                    onClick = { onNavigate(Screen.Timer.route) },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.onPrimary,
+                                        contentColor = MaterialTheme.colorScheme.primary
+                                    ),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text("Open", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Quick Actions
                 item {
                     Text(
@@ -195,7 +266,10 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        QuickActionButton("Start Timer", Icons.Default.Timer) { onNavigate(Screen.Timer.route) }
+                        QuickActionButton(
+                            if (activeTimerData.isRunning) "Live Timer ⏱️" else "Start Timer",
+                            if (activeTimerData.isRunning) Icons.Default.Timelapse else Icons.Default.Timer
+                        ) { onNavigate(Screen.Timer.route) }
                         QuickActionButton("Manual Job", Icons.Default.EditNote) { onNavigate(Screen.ManualJob.route) }
                         QuickActionButton("Customers", Icons.Default.PersonAdd) { onNavigate(Screen.Customers.route) }
                         QuickActionButton("Expenses", Icons.Default.Receipt) { onNavigate(Screen.Expenses.route) }

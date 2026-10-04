@@ -1,6 +1,10 @@
 package com.example.ui.timer
 
+import android.Manifest
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,14 +15,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.*
 import com.example.data.repository.TimeBillRepository
+import com.example.service.TimerStateManager
 import com.example.ui.util.clearFocusOnTap
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -31,9 +35,26 @@ fun TimerScreen(
     repository: TimeBillRepository,
     onFinish: () -> Unit
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Request notification permission for foreground timer notification on Android 13+
+    val notificationPermLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     val customersState = repository.observeCustomers(currentUserId).collectAsState(initial = emptyList())
     val servicesState = repository.observeServices(currentUserId).collectAsState(initial = emptyList())
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
+
+    val activeTimerData by TimerStateManager.timerData.collectAsState()
+    val liveElapsedSeconds by TimerStateManager.elapsedSeconds.collectAsState()
 
     var selectedCustomer by remember { mutableStateOf<Customer?>(null) }
     var customerSearchQuery by remember { mutableStateOf("") }
@@ -41,13 +62,6 @@ fun TimerScreen(
     var selectedService by remember { mutableStateOf<ServiceItem?>(null) }
     var customRate by remember { mutableStateOf("500") }
     var notes by remember { mutableStateOf("") }
-
-    var isTimerStarted by remember { mutableStateOf(false) }
-    var isPaused by remember { mutableStateOf(false) }
-
-    var startTimeMs by remember { mutableStateOf(0L) }
-    var accumulatedSeconds by remember { mutableStateOf(0L) }
-    var currentElapsedSeconds by remember { mutableStateOf(0L) }
 
     // Quick Add Dialog States
     var showAddCustomerDialog by remember { mutableStateOf(false) }
@@ -64,7 +78,8 @@ fun TimerScreen(
     var editableRate by remember { mutableStateOf("500") }
     var editableAmount by remember { mutableStateOf("0") }
 
-    val scope = rememberCoroutineScope()
+    // BackHandler: User can go back, timer will keep running in background!
+    BackHandler { onFinish() }
 
     // Ensure services are seeded
     LaunchedEffect(currentUserId) {
@@ -80,22 +95,16 @@ fun TimerScreen(
         }
     }
 
-    LaunchedEffect(isTimerStarted, isPaused) {
-        while (isTimerStarted && !isPaused) {
-            delay(1000L)
-            currentElapsedSeconds += 1
-        }
-    }
-
-    val rate = round(customRate.toDoubleOrNull() ?: selectedService?.hourlyRate ?: 500.0)
-    val billableSeconds = currentElapsedSeconds
+    val isTimerRunning = activeTimerData.isRunning
+    val currentRate = if (isTimerRunning) activeTimerData.hourlyRate else (customRate.toDoubleOrNull() ?: selectedService?.hourlyRate ?: 500.0)
+    val billableSeconds = if (isTimerRunning) liveElapsedSeconds else 0L
     val billableHours = billableSeconds / 3600.0
-    val currentAmount = round(billableHours * rate)
+    val currentAmount = round(billableHours * currentRate)
 
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    val timeFormat = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
     val currentDate = dateFormat.format(Date())
-    val startTimeFormatted = if (startTimeMs > 0L) timeFormat.format(Date(startTimeMs)) else timeFormat.format(Date())
+    val startTimeFormatted = if (activeTimerData.initialStartMs > 0L) timeFormat.format(Date(activeTimerData.initialStartMs)) else timeFormat.format(Date())
 
     val matchingCustomers = customersState.value.filter {
         customerSearchQuery.isBlank() ||
@@ -126,7 +135,8 @@ fun TimerScreen(
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (!isTimerStarted) {
+            if (!isTimerRunning) {
+                // Setup and Start Screen
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -138,36 +148,25 @@ fun TimerScreen(
 
                         // Searchable Customer Dropdown + Quick Add
                         var customerExpanded by remember { mutableStateOf(false) }
-                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             ExposedDropdownMenuBox(
                                 expanded = customerExpanded,
-                                onExpandedChange = { customerExpanded = !customerExpanded },
+                                onExpandedChange = { customerExpanded = it },
                                 modifier = Modifier.weight(1f)
                             ) {
                                 OutlinedTextField(
-                                    value = if (customerSearchQuery.isNotEmpty()) customerSearchQuery else (selectedCustomer?.name ?: ""),
-                                    onValueChange = { query ->
-                                        customerSearchQuery = query
-                                        selectedCustomer = customersState.value.find { it.name.equals(query.trim(), ignoreCase = true) }
+                                    value = customerSearchQuery,
+                                    onValueChange = {
+                                        customerSearchQuery = it
                                         customerExpanded = true
                                     },
-                                    readOnly = false,
-                                    singleLine = true,
                                     label = { Text("Customer *", maxLines = 1) },
-                                    placeholder = { Text("Search customer...", maxLines = 1) },
-                                    trailingIcon = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            if (customerSearchQuery.isNotEmpty() || selectedCustomer != null) {
-                                                IconButton(onClick = {
-                                                    customerSearchQuery = ""
-                                                    selectedCustomer = null
-                                                }) {
-                                                    Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(20.dp))
-                                                }
-                                            }
-                                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = customerExpanded)
-                                        }
-                                    },
+                                    placeholder = { Text("Select / Type Name", maxLines = 1) },
+                                    singleLine = true,
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = customerExpanded) },
                                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                                     shape = RoundedCornerShape(12.dp)
                                 )
@@ -177,35 +176,21 @@ fun TimerScreen(
                                 ) {
                                     if (matchingCustomers.isEmpty()) {
                                         DropdownMenuItem(
-                                            text = { Text("No customer found matching '$customerSearchQuery'") },
-                                            onClick = {
-                                                newCustomerName = customerSearchQuery
-                                                customerExpanded = false
-                                                showAddCustomerDialog = true
-                                            }
+                                            text = { Text("No matching customers") },
+                                            onClick = { }
                                         )
                                     } else {
                                         matchingCustomers.forEach { customer ->
                                             DropdownMenuItem(
-                                                text = { 
+                                                text = {
                                                     Column {
-                                                        Text(customer.name, fontWeight = FontWeight.SemiBold)
-                                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                            Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                        Text(customer.name, fontWeight = FontWeight.Bold)
+                                                        if (customer.mobile.isNotEmpty() || customer.village.isNotEmpty()) {
                                                             Text(
-                                                                text = customer.mobile,
+                                                                "${customer.mobile} ${if (customer.village.isNotEmpty()) "• ${customer.village}" else ""}",
                                                                 style = MaterialTheme.typography.bodySmall,
                                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                                             )
-                                                            if (customer.village.isNotEmpty()) {
-                                                                Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                                Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                                Text(
-                                                                    text = customer.village,
-                                                                    style = MaterialTheme.typography.bodySmall,
-                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                                )
-                                                            }
                                                         }
                                                     }
                                                 },
@@ -222,6 +207,7 @@ fun TimerScreen(
                                         text = { Text("➕ Add New Customer", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
                                         onClick = {
                                             customerExpanded = false
+                                            newCustomerName = customerSearchQuery
                                             showAddCustomerDialog = true
                                         }
                                     )
@@ -233,18 +219,21 @@ fun TimerScreen(
                                 modifier = Modifier.size(50.dp),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Icon(Icons.Default.PersonAdd, contentDescription = "Add Customer")
+                                Icon(Icons.Default.Add, contentDescription = "Add Customer")
                             }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Service Dropdown + Quick Add
+                        // Searchable Service Dropdown + Quick Add
                         var serviceExpanded by remember { mutableStateOf(false) }
-                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             ExposedDropdownMenuBox(
                                 expanded = serviceExpanded,
-                                onExpandedChange = { serviceExpanded = !serviceExpanded },
+                                onExpandedChange = { serviceExpanded = it },
                                 modifier = Modifier.weight(1f)
                             ) {
                                 OutlinedTextField(
@@ -326,9 +315,15 @@ fun TimerScreen(
 
                         Button(
                             onClick = {
-                                if (selectedCustomer == null) return@Button
-                                startTimeMs = System.currentTimeMillis()
-                                isTimerStarted = true
+                                val customer = selectedCustomer ?: return@Button
+                                val rateVal = customRate.toDoubleOrNull() ?: selectedService?.hourlyRate ?: 500.0
+                                TimerStateManager.startTimer(
+                                    context = context,
+                                    customer = customer,
+                                    service = selectedService,
+                                    rate = rateVal,
+                                    notes = notes
+                                )
                             },
                             enabled = selectedCustomer != null,
                             modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -345,6 +340,7 @@ fun TimerScreen(
                     }
                 }
             } else {
+                // Active Running Timer Card (Photo 1 - No Edit Rate field during active run)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
@@ -354,8 +350,15 @@ fun TimerScreen(
                         modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(selectedCustomer?.name ?: "", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text(selectedService?.name ?: "Working", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = activeTimerData.customer?.name ?: "Customer",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = activeTimerData.service?.name ?: "Working",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
 
                         Spacer(modifier = Modifier.height(24.dp))
 
@@ -378,25 +381,14 @@ fun TimerScreen(
                             color = MaterialTheme.colorScheme.secondary
                         )
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        OutlinedTextField(
-                            value = customRate,
-                            onValueChange = { customRate = it },
-                            label = { Text("Edit Rate (₹/hr)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Start: $startTimeFormatted")
-                            Text("Rate: ₹${rate.toInt()}/hr")
+                            Text("Start: $startTimeFormatted", fontWeight = FontWeight.Medium)
+                            Text("Rate: ₹${currentRate.toInt()}/hr", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -409,20 +401,22 @@ fun TimerScreen(
                 ) {
                     Button(
                         onClick = {
-                            isPaused = !isPaused
-                            if (!isPaused) {
-                                startTimeMs = System.currentTimeMillis()
+                            if (activeTimerData.isPaused) {
+                                TimerStateManager.resumeTimer(context)
                             } else {
-                                accumulatedSeconds = currentElapsedSeconds
+                                TimerStateManager.pauseTimer(context)
                             }
                         },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                     ) {
-                        Icon(if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause, contentDescription = null)
+                        Icon(
+                            if (activeTimerData.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                            contentDescription = null
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isPaused) "Resume" else "Pause")
+                        Text(if (activeTimerData.isPaused) "Resume" else "Pause", fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -430,7 +424,7 @@ fun TimerScreen(
 
                 Button(
                     onClick = {
-                        editableRate = rate.toInt().toString()
+                        editableRate = currentRate.toInt().toString()
                         editableAmount = currentAmount.toLong().toString()
                         showReviewDialog = true
                     },
@@ -445,7 +439,7 @@ fun TimerScreen(
             }
         }
 
-        // Quick Add Customer Dialog (without address field)
+        // Quick Add Customer Dialog
         if (showAddCustomerDialog) {
             AlertDialog(
                 onDismissRequest = { showAddCustomerDialog = false },
@@ -578,18 +572,19 @@ fun TimerScreen(
         if (showReviewDialog) {
             AlertDialog(
                 onDismissRequest = { showReviewDialog = false },
-                title = { Text("Review & Confirm Bill") },
+                title = { Text("Review & Confirm Bill", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Customer: ${selectedCustomer?.name}")
-                        Text("Service: ${selectedService?.name ?: "Service"}")
-                        Text("Billable Time: ${billableSeconds / 3600}h ${(billableSeconds % 3600) / 60}m")
+                        Text("Customer: ${activeTimerData.customer?.name ?: selectedCustomer?.name}")
+                        Text("Service: ${activeTimerData.service?.name ?: selectedService?.name ?: "Service"}")
+                        Text("Billable Time: ${billableSeconds / 3600}h ${(billableSeconds % 3600) / 60}m ${billableSeconds % 60}s")
 
                         OutlinedTextField(
                             value = editableRate,
                             onValueChange = { editableRate = it },
                             label = { Text("Hourly Rate (₹)") },
                             singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -598,6 +593,7 @@ fun TimerScreen(
                             onValueChange = { editableAmount = it },
                             label = { Text("Final Amount (₹) [Editable]") },
                             singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -605,16 +601,20 @@ fun TimerScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            val finalRate = round(editableRate.toDoubleOrNull() ?: rate)
+                            val finalRate = round(editableRate.toDoubleOrNull() ?: currentRate)
                             val finalAmt = round(editableAmount.toDoubleOrNull() ?: currentAmount)
-                            val totalMin = (currentElapsedSeconds / 60).toInt()
+                            val totalMin = (billableSeconds / 60).toInt()
                             val breakMin = 0
                             val billableMin = maxOf(1, totalMin)
 
+                            val cust = activeTimerData.customer ?: selectedCustomer
+                            val srv = activeTimerData.service ?: selectedService
+                            val noteText = activeTimerData.notes.ifBlank { notes }
+
                             scope.launch {
                                 val existingJob = jobsState.value.find { 
-                                    it.customerId == (selectedCustomer?.customerId ?: "") && 
-                                    it.serviceId == (selectedService?.serviceId ?: "") && 
+                                    it.customerId == (cust?.customerId ?: "") && 
+                                    it.serviceId == (srv?.serviceId ?: "") && 
                                     it.date == currentDate 
                                 }
 
@@ -627,16 +627,16 @@ fun TimerScreen(
                                         finalAmount = existingJob.finalAmount + finalAmt,
                                         pendingAmount = existingJob.pendingAmount + finalAmt,
                                         endTime = timeFormat.format(Date()),
-                                        notes = if (notes.isBlank()) existingJob.notes else if (existingJob.notes.isBlank()) notes else "${existingJob.notes}, $notes"
+                                        notes = if (noteText.isBlank()) existingJob.notes else if (existingJob.notes.isBlank()) noteText else "${existingJob.notes}, $noteText"
                                     )
                                 } else {
                                     Job(
                                         jobId = "job_${System.currentTimeMillis()}",
                                         userId = currentUserId,
-                                        customerId = selectedCustomer?.customerId ?: "cust_unknown",
-                                        customerName = selectedCustomer?.name ?: "Unknown",
-                                        serviceId = selectedService?.serviceId ?: "srv_unknown",
-                                        serviceName = selectedService?.name ?: "Service",
+                                        customerId = cust?.customerId ?: "cust_unknown",
+                                        customerName = cust?.name ?: "Unknown",
+                                        serviceId = srv?.serviceId ?: "srv_unknown",
+                                        serviceName = srv?.name ?: "Service",
                                         date = currentDate,
                                         startTime = startTimeFormatted,
                                         endTime = timeFormat.format(Date()),
@@ -649,22 +649,23 @@ fun TimerScreen(
                                         pendingAmount = finalAmt,
                                         paymentStatus = "Pending",
                                         status = "Completed",
-                                        notes = notes
+                                        notes = noteText
                                     )
                                 }
                                 repository.saveJob(job)
 
-                                // Update customer totals correctly
-                                selectedCustomer?.let { cust ->
-                                    val updatedCust = cust.copy(
-                                        totalJobs = if (existingJob == null) cust.totalJobs + 1 else cust.totalJobs,
-                                        totalAmount = cust.totalAmount + finalAmt,
-                                        pendingAmount = cust.pendingAmount + finalAmt,
+                                // Update customer totals
+                                cust?.let { c ->
+                                    val updatedCust = c.copy(
+                                        totalJobs = if (existingJob == null) c.totalJobs + 1 else c.totalJobs,
+                                        totalAmount = c.totalAmount + finalAmt,
+                                        pendingAmount = c.pendingAmount + finalAmt,
                                         updatedAt = System.currentTimeMillis()
                                     )
                                     repository.saveCustomer(updatedCust)
                                 }
 
+                                TimerStateManager.stopTimer(context)
                                 showReviewDialog = false
                                 onFinish()
                             }

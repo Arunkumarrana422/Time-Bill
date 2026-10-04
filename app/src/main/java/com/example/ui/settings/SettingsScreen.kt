@@ -59,6 +59,7 @@ private fun deriveNameFromEmail(email: String?): String {
 fun SettingsScreen(
     currentUserId: String,
     repository: TimeBillRepository,
+    showBottomBar: Boolean = true,
     onNavigate: (String) -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit
@@ -162,37 +163,39 @@ fun SettingsScreen(
             )
         },
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    label = { Text("Home") },
-                    selected = false,
-                    onClick = { onNavigate(Screen.Dashboard.route) }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Work, contentDescription = null) },
-                    label = { Text("Jobs") },
-                    selected = false,
-                    onClick = { onNavigate(Screen.Jobs.route) }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.People, contentDescription = null) },
-                    label = { Text("Customers") },
-                    selected = false,
-                    onClick = { onNavigate(Screen.Customers.route) }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
-                    label = { Text("Reports") },
-                    selected = false,
-                    onClick = { onNavigate(Screen.Reports.route) }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    label = { Text("Settings") },
-                    selected = true,
-                    onClick = {}
-                )
+            if (showBottomBar) {
+                NavigationBar {
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                        label = { Text("Home") },
+                        selected = false,
+                        onClick = { onNavigate(Screen.Dashboard.route) }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Work, contentDescription = null) },
+                        label = { Text("Jobs") },
+                        selected = false,
+                        onClick = { onNavigate(Screen.Jobs.route) }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.People, contentDescription = null) },
+                        label = { Text("Customers") },
+                        selected = false,
+                        onClick = { onNavigate(Screen.Customers.route) }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
+                        label = { Text("Reports") },
+                        selected = false,
+                        onClick = { onNavigate(Screen.Reports.route) }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                        label = { Text("Settings") },
+                        selected = true,
+                        onClick = {}
+                    )
+                }
             }
         }
     ) { padding ->
