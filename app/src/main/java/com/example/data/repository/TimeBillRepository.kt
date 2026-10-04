@@ -34,6 +34,24 @@ class TimeBillRepository(private val context: Context) {
         return auth.currentUser?.uid ?: "local_offline_user"
     }
 
+    private fun mergeProfiles(existing: UserProfile?, incoming: UserProfile): UserProfile {
+        if (existing == null) return incoming
+        return incoming.copy(
+            userId = incoming.userId.ifBlank { existing.userId },
+            name = incoming.name.ifBlank { existing.name },
+            businessName = incoming.businessName.ifBlank { existing.businessName },
+            mobile = incoming.mobile.ifBlank { existing.mobile },
+            address = incoming.address.ifBlank { existing.address },
+            currency = incoming.currency.ifBlank { existing.currency },
+            defaultRate = if (incoming.defaultRate > 0) incoming.defaultRate else existing.defaultRate,
+            defaultService = incoming.defaultService.ifBlank { existing.defaultService },
+            invoicePrefix = incoming.invoicePrefix.ifBlank { existing.invoicePrefix },
+            paymentTerms = incoming.paymentTerms.ifBlank { existing.paymentTerms },
+            isSetupComplete = incoming.isSetupComplete || existing.isSetupComplete,
+            profilePhotoUri = incoming.profilePhotoUri.ifBlank { existing.profilePhotoUri }
+        )
+    }
+
     // User Profile
     fun observeUserProfile(userId: String): Flow<UserProfile?> = appDb.userDao().observeUser(userId)
 
@@ -49,10 +67,12 @@ class TimeBillRepository(private val context: Context) {
             try {
                 val doc = db.collection("users").document(userId).get().await()
                 if (doc.exists()) {
-                    val profile = doc.toObject(UserProfile::class.java)
-                    if (profile != null) {
-                        appDb.userDao().insertUser(profile)
-                        return@withContext profile
+                    val incoming = doc.toObject(UserProfile::class.java)
+                    if (incoming != null) {
+                        val existing = appDb.userDao().getUser(userId)
+                        val merged = mergeProfiles(existing, incoming)
+                        appDb.userDao().insertUser(merged)
+                        return@withContext merged
                     }
                 }
             } catch (e: Exception) {
@@ -91,10 +111,12 @@ class TimeBillRepository(private val context: Context) {
                     return@addSnapshotListener
                 }
                 if (snapshot != null && snapshot.exists()) {
-                    val profile = snapshot.toObject(UserProfile::class.java)
-                    if (profile != null) {
+                    val incoming = snapshot.toObject(UserProfile::class.java)
+                    if (incoming != null) {
                         scope.launch(Dispatchers.IO) {
-                            appDb.userDao().insertUser(profile)
+                            val existing = appDb.userDao().getUser(userId)
+                            val merged = mergeProfiles(existing, incoming)
+                            appDb.userDao().insertUser(merged)
                         }
                     }
                 }
@@ -292,9 +314,11 @@ class TimeBillRepository(private val context: Context) {
             try {
                 val userDoc = db.collection("users").document(userId).get().await()
                 if (userDoc.exists()) {
-                    val profile = userDoc.toObject(UserProfile::class.java)
-                    if (profile != null) {
-                        appDb.userDao().insertUser(profile)
+                    val incoming = userDoc.toObject(UserProfile::class.java)
+                    if (incoming != null) {
+                        val existing = appDb.userDao().getUser(userId)
+                        val merged = mergeProfiles(existing, incoming)
+                        appDb.userDao().insertUser(merged)
                     }
                 }
 
