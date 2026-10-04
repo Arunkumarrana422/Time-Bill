@@ -335,16 +335,10 @@ fun DashboardScreen(
                         val jobCardShape = RoundedCornerShape(14.dp)
                         Card(
                             onClick = { onNavigate(Screen.JobDetail.createRoute(job.jobId)) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .shadow(
-                                    elevation = 2.5.dp,
-                                    shape = jobCardShape,
-                                    ambientColor = Color.Black.copy(alpha = 0.08f),
-                                    spotColor = Color.Black.copy(alpha = 0.16f)
-                                ),
+                            modifier = Modifier.fillMaxWidth(),
                             shape = jobCardShape,
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -442,14 +436,10 @@ fun MetricCard(
 ) {
     val cardShape = RoundedCornerShape(16.dp)
     Card(
-        modifier = modifier.shadow(
-            elevation = 2.5.dp,
-            shape = cardShape,
-            ambientColor = Color.Black.copy(alpha = 0.08f),
-            spotColor = Color.Black.copy(alpha = 0.16f)
-        ),
+        modifier = modifier,
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = containerColor)
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)

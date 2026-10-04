@@ -198,16 +198,10 @@ fun JobCard(job: Job, onClick: () -> Unit) {
     val cardShape = RoundedCornerShape(14.dp)
     Card(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 2.5.dp,
-                shape = cardShape,
-                ambientColor = Color.Black.copy(alpha = 0.08f),
-                spotColor = Color.Black.copy(alpha = 0.16f)
-            ),
+        modifier = Modifier.fillMaxWidth(),
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -358,12 +352,10 @@ fun JobDetailScreen(
         ) {
             item {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(detailCardShape),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = detailCardShape,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 6.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

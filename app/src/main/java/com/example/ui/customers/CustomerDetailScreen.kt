@@ -138,12 +138,10 @@ fun CustomerDetailScreen(
             item {
                 val summaryCardShape = RoundedCornerShape(16.dp)
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(summaryCardShape),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = summaryCardShape,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Ledger Summary", fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -220,12 +218,10 @@ fun CustomerDetailScreen(
 
                     val jobItemShape = RoundedCornerShape(14.dp)
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(jobItemShape),
+                        modifier = Modifier.fillMaxWidth(),
                         shape = jobItemShape,
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -275,12 +271,10 @@ fun CustomerDetailScreen(
                 items(customerPayments) { payment ->
                     val paymentCardShape = RoundedCornerShape(14.dp)
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(paymentCardShape),
+                        modifier = Modifier.fillMaxWidth(),
                         shape = paymentCardShape,
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp).fillMaxWidth(),

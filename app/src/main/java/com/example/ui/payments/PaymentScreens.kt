@@ -119,12 +119,10 @@ fun PaymentListScreen(
 
                         val paymentCardShape = RoundedCornerShape(14.dp)
                         Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(paymentCardShape),
+                            modifier = Modifier.fillMaxWidth(),
                             shape = paymentCardShape,
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp).fillMaxWidth(),

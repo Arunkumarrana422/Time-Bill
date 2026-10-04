@@ -219,12 +219,10 @@ fun CalendarScreen(
             // Summary Card
             val summaryCardShape = RoundedCornerShape(14.dp)
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(summaryCardShape),
+                modifier = Modifier.fillMaxWidth(),
                 shape = summaryCardShape,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(displayPeriodTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -260,12 +258,10 @@ fun CalendarScreen(
                     items(filteredJobs) { job ->
                         val jobCardShape = RoundedCornerShape(12.dp)
                         Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(jobCardShape),
+                            modifier = Modifier.fillMaxWidth(),
                             shape = jobCardShape,
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
                         ) {
                             Row(
                                 modifier = Modifier

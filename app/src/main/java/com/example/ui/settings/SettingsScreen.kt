@@ -248,19 +248,13 @@ fun SettingsScreen(
                 }
             }
 
-            // User Profile Card with subtle soft shadow
+            // User Profile Card with Material 3 elevated shadow
             val profileCardShape = RoundedCornerShape(18.dp)
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(
-                        elevation = 2.5.dp,
-                        shape = profileCardShape,
-                        ambientColor = Color.Black.copy(alpha = 0.08f),
-                        spotColor = Color.Black.copy(alpha = 0.16f)
-                    ),
+                modifier = Modifier.fillMaxWidth(),
                 shape = profileCardShape,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp).fillMaxWidth(),
@@ -399,19 +393,13 @@ fun SettingsScreen(
                 }
             }
 
-            // Quick App Management Cards with subtle soft shadow
+            // Quick App Management Cards with Material 3 elevated shadow
             val manageCardShape = RoundedCornerShape(18.dp)
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(
-                        elevation = 2.5.dp,
-                        shape = manageCardShape,
-                        ambientColor = Color.Black.copy(alpha = 0.08f),
-                        spotColor = Color.Black.copy(alpha = 0.16f)
-                    ),
+                modifier = Modifier.fillMaxWidth(),
                 shape = manageCardShape,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Business Management", fontWeight = FontWeight.Bold, fontSize = 16.sp)

@@ -341,12 +341,6 @@ fun CustomerCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = if (isSelected) 4.dp else 2.5.dp,
-                shape = cardShape,
-                ambientColor = Color.Black.copy(alpha = 0.08f),
-                spotColor = Color.Black.copy(alpha = 0.16f)
-            )
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
@@ -355,7 +349,8 @@ fun CustomerCard(
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
         ),
-        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 6.dp else 4.dp, pressedElevation = 7.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
