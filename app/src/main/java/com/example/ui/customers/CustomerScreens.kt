@@ -189,7 +189,7 @@ fun CustomerListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Box(modifier = Modifier.padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 8.dp)) {
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -341,7 +341,6 @@ fun CustomerCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(cardShape)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick

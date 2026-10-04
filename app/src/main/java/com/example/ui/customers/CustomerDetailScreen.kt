@@ -107,22 +107,20 @@ fun CustomerDetailScreen(
             )
         },
         floatingActionButton = {
-            if (pendingDue > 0) {
-                AnimatedVisibility(
-                    visible = isFabVisible,
-                    enter = scaleIn() + fadeIn(),
-                    exit = scaleOut() + fadeOut()
-                ) {
-                    ExtendedFloatingActionButton(
-                        onClick = {
-                            onNavigate(Screen.ReceivePayment.createRoute(customer.customerId))
-                        },
-                        icon = { Icon(Icons.Default.Payment, contentDescription = null) },
-                        text = { Text("Receive Payment", fontWeight = FontWeight.Bold) },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
+            AnimatedVisibility(
+                visible = isFabVisible,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        onNavigate(Screen.ReceivePayment.createRoute(customer.customerId))
+                    },
+                    icon = { Icon(Icons.Default.Payment, contentDescription = null) },
+                    text = { Text("Receive Payment", fontWeight = FontWeight.Bold) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             }
         }
     ) { padding ->

@@ -67,7 +67,7 @@ fun PaymentListScreen(
                 .padding(padding)
         ) {
             // Search Input Box
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+            Box(modifier = Modifier.padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 10.dp)) {
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },

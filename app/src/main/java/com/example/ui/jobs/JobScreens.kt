@@ -121,6 +121,7 @@ fun JobListScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
+            Spacer(modifier = Modifier.height(12.dp))
             // Search Input
             OutlinedTextField(
                 value = searchQuery,
