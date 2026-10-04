@@ -152,7 +152,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("⚙️ Account & Profile", fontWeight = FontWeight.Bold) },
+                title = { Text("Account & Profile", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -285,20 +285,20 @@ fun SettingsScreen(
                     // Profile Photo Circle with Camera Badge
                     Box(
                         modifier = Modifier
-                            .size(105.dp)
-                            .clip(CircleShape)
-                            .clickable {
-                                photoPickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            },
+                            .size(112.dp),
                         contentAlignment = Alignment.Center
                     ) {
+                        // Main Circular Avatar
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
+                                .size(100.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .clickable {
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             if (decodedBitmap != null) {
@@ -336,21 +336,29 @@ fun SettingsScreen(
                             }
                         }
 
-                        // Bottom-Right Camera Icon Badge
-                        Box(
+                        // Bottom-Right Camera Icon Badge (Fully round, elevated, never cut off)
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                            shadowElevation = 4.dp,
+                            border = androidx.compose.foundation.BorderStroke(2.5.dp, MaterialTheme.colorScheme.surface),
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
-                            contentAlignment = Alignment.Center
+                                .size(36.dp)
+                                .clickable {
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                }
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.CameraAlt,
-                                contentDescription = "Change Photo",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Change Photo",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
                         }
                     }
 
@@ -418,29 +426,35 @@ fun SettingsScreen(
             }
 
             // Account Actions / Logout Section
-            val logoutCardShape = RoundedCornerShape(18.dp)
-            Card(
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Clean Outlined Logout Button (Border Only, No Heavy Highlight Card)
+            OutlinedButton(
+                onClick = { showLogoutDialog = true },
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.error),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(logoutCardShape),
-                shape = logoutCardShape,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    .height(50.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Account Actions", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onErrorContainer)
-                    Button(
-                        onClick = { showLogoutDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
-                    ) {
-                        Icon(Icons.Default.Logout, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Logout", fontWeight = FontWeight.Bold)
-                    }
-                }
+                Icon(
+                    imageVector = Icons.Default.Logout,
+                    contentDescription = "Logout",
+                    tint = MaterialTheme.colorScheme.error
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Logout",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 

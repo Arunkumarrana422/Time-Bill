@@ -107,7 +107,7 @@ fun TimerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("⏱️ Work Timer & Billing", fontWeight = FontWeight.Bold) },
+                title = { Text("Work Timer & Billing", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onFinish) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -190,11 +190,23 @@ fun TimerScreen(
                                                 text = { 
                                                     Column {
                                                         Text(customer.name, fontWeight = FontWeight.SemiBold)
-                                                        Text(
-                                                            text = "📞 ${customer.mobile} ${if (customer.village.isNotEmpty()) "• 📍 ${customer.village}" else ""}",
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
+                                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                            Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                            Text(
+                                                                text = customer.mobile,
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                            if (customer.village.isNotEmpty()) {
+                                                                Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                                Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                                Text(
+                                                                    text = customer.village,
+                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                )
+                                                            }
+                                                        }
                                                     }
                                                 },
                                                 onClick = {
@@ -437,7 +449,7 @@ fun TimerScreen(
         if (showAddCustomerDialog) {
             AlertDialog(
                 onDismissRequest = { showAddCustomerDialog = false },
-                title = { Text("➕ Add New Customer") },
+                title = { Text("Add New Customer", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(
@@ -509,7 +521,7 @@ fun TimerScreen(
         if (showAddServiceDialog) {
             AlertDialog(
                 onDismissRequest = { showAddServiceDialog = false },
-                title = { Text("➕ Add New Service") },
+                title = { Text("Add New Service", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(

@@ -96,7 +96,7 @@ fun AuthScreen(
             ) {
                 // App Branding Header
                 Text(
-                    text = "🚜 Time Bill",
+                    text = "Time Bill",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary

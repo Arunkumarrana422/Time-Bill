@@ -1,11 +1,17 @@
 package com.example.ui.customers
 
-import androidx.activity.compose.BackHandler
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -19,14 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.model.Customer
-import com.example.data.model.Job
-import com.example.data.model.Payment
 import com.example.data.repository.TimeBillRepository
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
-import kotlin.math.round
+import com.example.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,8 +34,11 @@ fun CustomerDetailScreen(
     currentUserId: String,
     customerId: String,
     repository: TimeBillRepository,
+    onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    BackHandler { onBack() }
+
     val context = LocalContext.current
     val customersState = repository.observeCustomers(currentUserId).collectAsState(initial = emptyList())
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
@@ -45,13 +48,14 @@ fun CustomerDetailScreen(
     val customerJobs = jobsState.value.filter { it.customerId == customerId }
     val customerPayments = paymentsState.value.filter { it.customerId == customerId }
 
-    var showPaymentDialog by remember { mutableStateOf(false) }
-    var selectedJobForPayment by remember { mutableStateOf<Job?>(null) }
-    var payAmount by remember { mutableStateOf("") }
-    var payMethod by remember { mutableStateOf("Cash") }
-    var payNotes by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
 
-    val scope = rememberCoroutineScope()
+    // Hide FAB while scrolling down, show when scrolling up or at top / stopped
+    val isFabVisible by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 || !listState.isScrollInProgress || listState.lastScrolledBackward
+        }
+    }
 
     if (customer == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -64,7 +68,7 @@ fun CustomerDetailScreen(
     val paymentsSum = customerPayments.sumOf { it.amount }
     val jobsPaidSum = customerJobs.sumOf { it.paidAmount }
     
-    // Accurate single-counted total paid
+    // Accurate single-counted total paid from recorded payments
     val effectivePaid = if (customerPayments.isNotEmpty()) {
         paymentsSum
     } else if (jobsPaidSum > 0) {
@@ -104,26 +108,30 @@ fun CustomerDetailScreen(
         },
         floatingActionButton = {
             if (pendingDue > 0) {
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        val firstPendingJob = customerJobs.find { it.pendingAmount > 0 }
-                        selectedJobForPayment = firstPendingJob
-                        payAmount = (firstPendingJob?.pendingAmount ?: pendingDue).toInt().toString()
-                        payNotes = if (firstPendingJob != null) "Payment for ${firstPendingJob.serviceName}" else "General Payment"
-                        showPaymentDialog = true
-                    },
-                    icon = { Icon(Icons.Default.Payment, contentDescription = null) },
-                    text = { Text("Receive Payment") },
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
+                AnimatedVisibility(
+                    visible = isFabVisible,
+                    enter = scaleIn() + fadeIn(),
+                    exit = scaleOut() + fadeOut()
+                ) {
+                    ExtendedFloatingActionButton(
+                        onClick = {
+                            onNavigate(Screen.ReceivePayment.createRoute(customer.customerId))
+                        },
+                        icon = { Icon(Icons.Default.Payment, contentDescription = null) },
+                        text = { Text("Receive Payment", fontWeight = FontWeight.Bold) },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             }
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+                .padding(padding),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Customer Ledger Summary Card
@@ -140,9 +148,24 @@ fun CustomerDetailScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Ledger Summary", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("📞 Mobile: ${customer.mobile}")
-                        if (customer.village.isNotEmpty()) Text("📍 Village / Location: ${customer.village}")
-                        if (customer.notes.isNotEmpty()) Text("📝 Notes: ${customer.notes}")
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.primary)
+                            Text("Mobile: ${customer.mobile}")
+                        }
+                        if (customer.village.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.primary)
+                                Text("Village / Location: ${customer.village}")
+                            }
+                        }
+                        if (customer.notes.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.primary)
+                                Text("Notes: ${customer.notes}")
+                            }
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
                         HorizontalDivider()
                         Spacer(modifier = Modifier.height(12.dp))
@@ -183,6 +206,18 @@ fun CustomerDetailScreen(
                 }
             } else {
                 items(customerJobs) { job ->
+                    // Calculate accurate job paid & pending dynamically
+                    val jobSpecificPayments = customerPayments.filter { it.jobId == job.jobId }.sumOf { it.amount }
+                    val actualJobPaid = if (jobSpecificPayments > 0) {
+                        jobSpecificPayments
+                    } else if (customerJobs.size == 1) {
+                        effectivePaid
+                    } else {
+                        job.paidAmount
+                    }
+                    val actualJobPending = maxOf(0.0, job.finalAmount - actualJobPaid)
+                    val isJobFullyPaid = actualJobPending <= 0.0
+
                     val jobItemShape = RoundedCornerShape(14.dp)
                     Card(
                         modifier = Modifier
@@ -198,20 +233,26 @@ fun CustomerDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(job.serviceName, fontWeight = FontWeight.Bold)
-                                Text("${job.date} • ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m", style = MaterialTheme.typography.bodySmall)
+                                Text(job.serviceName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("${job.date} • ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (!isJobFullyPaid && actualJobPaid > 0) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text("Paid: ₹${actualJobPaid.toInt()}", style = MaterialTheme.typography.bodySmall, color = Color(0xFF16A34A), fontWeight = FontWeight.Medium)
+                                }
                             }
                             Column(horizontalAlignment = Alignment.End) {
-                                Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = if (job.paymentStatus == "Paid" || job.pendingAmount <= 0) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isJobFullyPaid) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
                                 ) {
                                     Text(
-                                        text = if (job.paymentStatus == "Paid" || job.pendingAmount <= 0) "Paid" else "Pending: ₹${job.pendingAmount.toInt()}",
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        text = if (isJobFullyPaid) "✓ Paid" else "Pending: ₹${actualJobPending.toInt()}",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                         fontSize = 11.sp,
-                                        color = if (job.paymentStatus == "Paid" || job.pendingAmount <= 0) Color(0xFF166534) else Color(0xFF991B1B),
+                                        color = if (isJobFullyPaid) Color(0xFF166534) else Color(0xFF991B1B),
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -255,200 +296,6 @@ fun CustomerDetailScreen(
                     }
                 }
             }
-        }
-
-        // Receive Payment Dialog with Service Selection Dropdown
-        if (showPaymentDialog) {
-            AlertDialog(
-                onDismissRequest = { showPaymentDialog = false },
-                title = { Text("Receive Payment from ${customer.name}", fontWeight = FontWeight.Bold) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        // Service / Job Dropdown
-                        var serviceDropdownExpanded by remember { mutableStateOf(false) }
-                        val pendingJobs = customerJobs.filter { it.pendingAmount > 0 }
-
-                        ExposedDropdownMenuBox(
-                            expanded = serviceDropdownExpanded,
-                            onExpandedChange = { serviceDropdownExpanded = it }
-                        ) {
-                            val serviceTitle = if (selectedJobForPayment != null) {
-                                "${selectedJobForPayment!!.serviceName} (${selectedJobForPayment!!.date}) - ₹${selectedJobForPayment!!.pendingAmount.toInt()} Due"
-                            } else {
-                                "All / General Settlement (₹${pendingDue.toInt()} Due)"
-                            }
-
-                            OutlinedTextField(
-                                value = serviceTitle,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Select Service / Job *") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = serviceDropdownExpanded) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                singleLine = true,
-                                shape = RoundedCornerShape(10.dp)
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = serviceDropdownExpanded,
-                                onDismissRequest = { serviceDropdownExpanded = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("All / General Settlement (₹${pendingDue.toInt()})", fontWeight = FontWeight.Bold) },
-                                    onClick = {
-                                        selectedJobForPayment = null
-                                        payAmount = pendingDue.toInt().toString()
-                                        payNotes = "General Payment"
-                                        serviceDropdownExpanded = false
-                                    }
-                                )
-                                pendingJobs.forEach { job ->
-                                    DropdownMenuItem(
-                                        text = { Text("${job.serviceName} (${job.date}) - ₹${job.pendingAmount.toInt()} Pending") },
-                                        onClick = {
-                                            selectedJobForPayment = job
-                                            payAmount = job.pendingAmount.toInt().toString()
-                                            payNotes = "Payment for ${job.serviceName}"
-                                            serviceDropdownExpanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        OutlinedTextField(
-                            value = payAmount,
-                            onValueChange = { payAmount = it },
-                            label = { Text("Payment Amount (₹) *") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        // Payment Method Dropdown
-                        var methodExpanded by remember { mutableStateOf(false) }
-                        val methods = listOf("Cash", "UPI / Online", "Bank Transfer", "Cheque", "Other")
-                        ExposedDropdownMenuBox(
-                            expanded = methodExpanded,
-                            onExpandedChange = { methodExpanded = it }
-                        ) {
-                            OutlinedTextField(
-                                value = payMethod,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Payment Method") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = methodExpanded) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                singleLine = true,
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            ExposedDropdownMenu(
-                                expanded = methodExpanded,
-                                onDismissRequest = { methodExpanded = false }
-                            ) {
-                                methods.forEach { m ->
-                                    DropdownMenuItem(
-                                        text = { Text(m) },
-                                        onClick = {
-                                            payMethod = m
-                                            methodExpanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        OutlinedTextField(
-                            value = payNotes,
-                            onValueChange = { payNotes = it },
-                            label = { Text("Payment Notes / Description") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val amt = round(payAmount.toDoubleOrNull() ?: 0.0)
-                            if (amt <= 0) return@Button
-                            scope.launch {
-                                val payId = "pay_${System.currentTimeMillis()}"
-                                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                                
-                                val chosenJobId = selectedJobForPayment?.jobId ?: ""
-                                val paymentDesc = if (payNotes.isNotBlank()) {
-                                    payNotes
-                                } else if (selectedJobForPayment != null) {
-                                    "Payment for ${selectedJobForPayment!!.serviceName}"
-                                } else {
-                                    "Payment for Services"
-                                }
-
-                                val payment = Payment(
-                                    paymentId = payId,
-                                    userId = currentUserId,
-                                    customerId = customerId,
-                                    customerName = customer.name,
-                                    jobId = chosenJobId,
-                                    amount = amt,
-                                    method = payMethod,
-                                    date = today,
-                                    notes = paymentDesc
-                                )
-                                repository.savePayment(payment)
-
-                                if (selectedJobForPayment != null) {
-                                    val targetJob = selectedJobForPayment!!
-                                    val newJobPaid = targetJob.paidAmount + amt
-                                    val newJobPending = maxOf(0.0, targetJob.finalAmount - newJobPaid)
-                                    val updatedJob = targetJob.copy(
-                                        paidAmount = newJobPaid,
-                                        pendingAmount = newJobPending,
-                                        paymentStatus = if (newJobPending <= 0) "Paid" else "Partially Paid"
-                                    )
-                                    repository.saveJob(updatedJob)
-                                } else {
-                                    var remainingPay = amt
-                                    val unpaidJobs = customerJobs.filter { it.pendingAmount > 0 }.sortedBy { it.createdAt }
-                                    for (j in unpaidJobs) {
-                                        if (remainingPay <= 0) break
-                                        val canPay = minOf(remainingPay, j.pendingAmount)
-                                        val newPaid = j.paidAmount + canPay
-                                        val newPending = maxOf(0.0, j.finalAmount - newPaid)
-                                        val updatedJ = j.copy(
-                                            paidAmount = newPaid,
-                                            pendingAmount = newPending,
-                                            paymentStatus = if (newPending <= 0) "Paid" else "Partially Paid"
-                                        )
-                                        repository.saveJob(updatedJ)
-                                        remainingPay -= canPay
-                                    }
-                                }
-
-                                val newCustomerPaid = effectivePaid + amt
-                                val newCustomerPending = maxOf(0.0, totalBilling - newCustomerPaid)
-                                val updatedCustomer = customer.copy(
-                                    paidAmount = newCustomerPaid,
-                                    pendingAmount = newCustomerPending,
-                                    updatedAt = System.currentTimeMillis()
-                                )
-                                repository.saveCustomer(updatedCustomer)
-
-                                showPaymentDialog = false
-                            }
-                        }
-                    ) {
-                        Text("Save Payment")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showPaymentDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
         }
     }
 }

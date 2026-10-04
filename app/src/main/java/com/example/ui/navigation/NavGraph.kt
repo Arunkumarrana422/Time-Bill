@@ -2,8 +2,10 @@ package com.example.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.example.data.model.UserProfile
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.auth.AuthScreen
@@ -14,6 +16,8 @@ import com.example.ui.timer.TimerScreen
 import com.example.ui.timer.ManualJobScreen
 import com.example.ui.customers.CustomerListScreen
 import com.example.ui.customers.CustomerDetailScreen
+import com.example.ui.customers.AddCustomerScreen
+import com.example.ui.payments.ReceivePaymentScreen
 import com.example.ui.services.ServiceListScreen
 import com.example.ui.jobs.JobListScreen
 import com.example.ui.jobs.JobDetailScreen
@@ -31,8 +35,12 @@ sealed class Screen(val route: String) {
     object Timer : Screen("timer")
     object ManualJob : Screen("manual_job")
     object Customers : Screen("customers")
+    object AddCustomer : Screen("add_customer")
     object CustomerDetail : Screen("customer_detail/{customerId}") {
         fun createRoute(customerId: String) = "customer_detail/$customerId"
+    }
+    object ReceivePayment : Screen("receive_payment?customerId={customerId}") {
+        fun createRoute(customerId: String = "") = if (customerId.isNotEmpty()) "receive_payment?customerId=$customerId" else "receive_payment"
     }
     object Services : Screen("services")
     object Jobs : Screen("jobs")
@@ -110,11 +118,37 @@ fun TimeBillNavGraph(
                 onBack = { navController.popBackStack() }
             )
         }
+        composable(Screen.AddCustomer.route) {
+            AddCustomerScreen(
+                currentUserId = currentUserId,
+                repository = repository,
+                onBack = { navController.popBackStack() }
+            )
+        }
         composable(Screen.CustomerDetail.route) { backStackEntry ->
             val customerId = backStackEntry.arguments?.getString("customerId") ?: ""
             CustomerDetailScreen(
                 currentUserId = currentUserId,
                 customerId = customerId,
+                repository = repository,
+                onNavigate = { route -> navController.navigate(route) },
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.ReceivePayment.route,
+            arguments = listOf(
+                navArgument("customerId") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                    nullable = true
+                }
+            )
+        ) { backStackEntry ->
+            val customerId = backStackEntry.arguments?.getString("customerId") ?: ""
+            ReceivePaymentScreen(
+                currentUserId = currentUserId,
+                initialCustomerId = customerId,
                 repository = repository,
                 onBack = { navController.popBackStack() }
             )
@@ -147,6 +181,7 @@ fun TimeBillNavGraph(
             PaymentListScreen(
                 currentUserId = currentUserId,
                 repository = repository,
+                onNavigate = { route -> navController.navigate(route) },
                 onBack = { navController.popBackStack() }
             )
         }

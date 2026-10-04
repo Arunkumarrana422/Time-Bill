@@ -44,7 +44,7 @@ fun ReportsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("📊 Business Reports & Analytics", fontWeight = FontWeight.Bold) },
+                title = { Text("Business Reports & Analytics", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")

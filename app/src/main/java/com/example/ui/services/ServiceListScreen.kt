@@ -48,7 +48,7 @@ fun ServiceListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("⚙️ Services & Rates", fontWeight = FontWeight.Bold) },
+                title = { Text("Services & Rates", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")

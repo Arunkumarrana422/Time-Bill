@@ -83,7 +83,7 @@ fun DashboardScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("🚜 Time Bill Dashboard", fontWeight = FontWeight.Bold) },
+                    title = { Text("Time Bill Dashboard", fontWeight = FontWeight.Bold) },
                     actions = {
                         IconButton(onClick = { onNavigate(Screen.Settings.route) }) {
                             Icon(Icons.Default.Settings, contentDescription = "Settings")
@@ -125,22 +125,13 @@ fun DashboardScreen(
                         onClick = { onNavigate(Screen.Settings.route) }
                     )
                 }
-            },
-            floatingActionButton = {
-                ExtendedFloatingActionButton(
-                    onClick = { onNavigate(Screen.Timer.route) },
-                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
-                    text = { Text("Start Work", fontWeight = FontWeight.Bold) },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
             }
         ) { padding ->
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
+                    .padding(padding),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Summary Cards Grid
@@ -287,19 +278,17 @@ fun DashboardScreen(
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                                    val isPaid = job.pendingAmount <= 0.0
                                     Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = when (job.paymentStatus) {
-                                            "Paid" -> MaterialTheme.colorScheme.primaryContainer
-                                            "Partially Paid" -> MaterialTheme.colorScheme.secondaryContainer
-                                            else -> MaterialTheme.colorScheme.errorContainer
-                                        }
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = if (isPaid) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
                                     ) {
                                         Text(
-                                            text = job.paymentStatus,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            text = if (isPaid) "✓ Paid" else "Pending: ₹${job.pendingAmount.toInt()}",
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                             fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium
+                                            color = if (isPaid) Color(0xFF166534) else Color(0xFF991B1B),
+                                            fontWeight = FontWeight.Bold
                                         )
                                     }
                                 }

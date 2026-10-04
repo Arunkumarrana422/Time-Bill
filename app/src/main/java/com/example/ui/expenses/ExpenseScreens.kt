@@ -43,7 +43,7 @@ fun ExpenseListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("⛽ Expenses Manager", fontWeight = FontWeight.Bold) },
+                title = { Text("Expenses Manager", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")

@@ -8,15 +8,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -107,7 +104,7 @@ fun ManualJobScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("📝 Manual Job Entry", fontWeight = FontWeight.Bold) },
+                title = { Text("Manual Job Entry", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onFinish) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -186,11 +183,23 @@ fun ManualJobScreen(
                                             text = {
                                                 Column {
                                                     Text(customer.name, fontWeight = FontWeight.SemiBold)
-                                                    Text(
-                                                        text = "📞 ${customer.mobile} ${if (customer.village.isNotEmpty()) "• 📍 ${customer.village}" else ""}",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
+                                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                        Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                        Text(
+                                                            text = customer.mobile,
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                        if (customer.village.isNotEmpty()) {
+                                                            Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                            Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                            Text(
+                                                                text = customer.village,
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                    }
                                                 }
                                             },
                                             onClick = {
@@ -448,7 +457,7 @@ fun ManualJobScreen(
         if (showAddCustomerDialog) {
             AlertDialog(
                 onDismissRequest = { showAddCustomerDialog = false },
-                title = { Text("➕ Add New Customer") },
+                title = { Text("Add New Customer", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(
@@ -520,7 +529,7 @@ fun ManualJobScreen(
         if (showAddServiceDialog) {
             AlertDialog(
                 onDismissRequest = { showAddServiceDialog = false },
-                title = { Text("➕ Add New Service") },
+                title = { Text("Add New Service", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(
