@@ -224,7 +224,7 @@ fun CalendarScreen(
                     .clip(summaryCardShape),
                 shape = summaryCardShape,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(displayPeriodTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -265,7 +265,7 @@ fun CalendarScreen(
                                 .clip(jobCardShape),
                             shape = jobCardShape,
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
                         ) {
                             Row(
                                 modifier = Modifier

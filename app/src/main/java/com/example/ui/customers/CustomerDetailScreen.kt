@@ -143,7 +143,7 @@ fun CustomerDetailScreen(
                         .clip(summaryCardShape),
                     shape = summaryCardShape,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Ledger Summary", fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -225,7 +225,7 @@ fun CustomerDetailScreen(
                             .clip(jobItemShape),
                         shape = jobItemShape,
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -280,7 +280,7 @@ fun CustomerDetailScreen(
                             .clip(paymentCardShape),
                         shape = paymentCardShape,
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp).fillMaxWidth(),

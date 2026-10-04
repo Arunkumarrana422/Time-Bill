@@ -203,6 +203,7 @@ fun DashboardScreen(
                         Surface(
                             shape = RoundedCornerShape(14.dp),
                             color = MaterialTheme.colorScheme.primary,
+                            shadowElevation = 4.dp,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onNavigate(Screen.Timer.route) }
@@ -338,7 +339,7 @@ fun DashboardScreen(
                                 .clip(jobCardShape),
                             shape = jobCardShape,
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -439,7 +440,7 @@ fun MetricCard(
         modifier = modifier.clip(cardShape),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -478,7 +479,8 @@ fun RowScope.QuickActionButton(
         Surface(
             modifier = Modifier.size(48.dp),
             shape = buttonShape,
-            color = MaterialTheme.colorScheme.surfaceVariant
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shadowElevation = 2.dp
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(icon, contentDescription = label, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
