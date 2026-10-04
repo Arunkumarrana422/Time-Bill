@@ -359,7 +359,8 @@ fun PaymentListScreen(
 
                                 val customerJobs = jobsState.value.filter { it.customerId == cust.customerId }
                                 val totalBilled = if (customerJobs.isNotEmpty()) customerJobs.sumOf { it.finalAmount } else cust.totalAmount
-                                val newCustomerPaid = cust.paidAmount + amt
+                                val previousPayments = paymentsState.value.filter { it.customerId == cust.customerId }.sumOf { it.amount }
+                                val newCustomerPaid = previousPayments + amt
                                 val newCustomerPending = maxOf(0.0, totalBilled - newCustomerPaid)
                                 val updatedCustomer = cust.copy(
                                     paidAmount = newCustomerPaid,

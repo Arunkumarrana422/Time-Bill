@@ -3,6 +3,7 @@ package com.example.ui.customers
 import androidx.activity.compose.BackHandler
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,12 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Customer
-import com.example.data.model.Job
-import com.example.data.model.Payment
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.navigation.Screen
 import kotlinx.coroutines.launch
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,8 +37,8 @@ fun CustomerListScreen(
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
     val paymentsState = repository.observePayments(currentUserId).collectAsState(initial = emptyList())
 
-    var searchQuery by remember { mutableStateOf("") }
     var showAddDialog by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
     var name by remember { mutableStateOf("") }
     var mobile by remember { mutableStateOf("") }
@@ -51,14 +49,14 @@ fun CustomerListScreen(
 
     val filteredCustomers = customersState.value.filter {
         it.name.contains(searchQuery, ignoreCase = true) ||
-                it.mobile.contains(searchQuery) ||
-                it.village.contains(searchQuery, ignoreCase = true)
+        it.mobile.contains(searchQuery, ignoreCase = true) ||
+        it.village.contains(searchQuery, ignoreCase = true)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("👥 Customers (${customersState.value.size})", fontWeight = FontWeight.Bold) },
+                title = { Text("👥 Customers & Ledgers", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -149,8 +147,18 @@ fun CustomerListScreen(
                         val customerPayments = paymentsState.value.filter { it.customerId == customer.customerId }
                         
                         val totalBilled = if (customerJobs.isNotEmpty()) customerJobs.sumOf { it.finalAmount } else customer.totalAmount
-                        val totalPaid = customerPayments.sumOf { it.amount } + customerJobs.sumOf { it.paidAmount }
-                        val effectivePaid = maxOf(customer.paidAmount, totalPaid)
+                        val paymentsSum = customerPayments.sumOf { it.amount }
+                        val jobsPaidSum = customerJobs.sumOf { it.paidAmount }
+
+                        // Single-counted accurate paid amount
+                        val effectivePaid = if (customerPayments.isNotEmpty()) {
+                            paymentsSum
+                        } else if (jobsPaidSum > 0) {
+                            jobsPaidSum
+                        } else {
+                            customer.paidAmount
+                        }
+                        
                         val pendingDue = maxOf(0.0, totalBilled - effectivePaid)
 
                         CustomerCard(
@@ -170,7 +178,7 @@ fun CustomerListScreen(
         if (showAddDialog) {
             AlertDialog(
                 onDismissRequest = { showAddDialog = false },
-                title = { Text("Add New Customer") },
+                title = { Text("Add New Customer", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedTextField(
@@ -201,6 +209,7 @@ fun CustomerListScreen(
                             value = notes,
                             onValueChange = { notes = it },
                             label = { Text("Notes (Optional)") },
+                            singleLine = true,
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -211,21 +220,22 @@ fun CustomerListScreen(
                         onClick = {
                             if (name.isBlank() || mobile.isBlank()) return@Button
                             scope.launch {
-                                val existing = customersState.value.find { it.name.trim().equals(name.trim(), ignoreCase = true) }
-                                val customer = existing?.copy(
-                                    mobile = mobile.trim(),
-                                    village = village.trim(),
-                                    notes = notes.trim(),
-                                    updatedAt = System.currentTimeMillis()
-                                ) ?: Customer(
-                                    customerId = "cust_${System.currentTimeMillis()}",
+                                val customerId = "cust_${System.currentTimeMillis()}"
+                                val newCustomer = Customer(
+                                    customerId = customerId,
                                     userId = currentUserId,
                                     name = name.trim(),
                                     mobile = mobile.trim(),
                                     village = village.trim(),
-                                    notes = notes.trim()
+                                    address = "",
+                                    notes = notes.trim(),
+                                    totalJobs = 0,
+                                    totalAmount = 0.0,
+                                    paidAmount = 0.0,
+                                    pendingAmount = 0.0,
+                                    updatedAt = System.currentTimeMillis()
                                 )
-                                repository.saveCustomer(customer)
+                                repository.saveCustomer(newCustomer)
                                 name = ""
                                 mobile = ""
                                 village = ""
@@ -234,7 +244,7 @@ fun CustomerListScreen(
                             }
                         }
                     ) {
-                        Text("Save Customer")
+                        Text("Add Customer")
                     }
                 },
                 dismissButton = {

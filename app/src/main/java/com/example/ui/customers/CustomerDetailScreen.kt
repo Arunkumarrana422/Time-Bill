@@ -60,9 +60,19 @@ fun CustomerDetailScreen(
         return
     }
 
-    val totalBilling = customerJobs.sumOf { it.finalAmount }
-    val totalPaid = customerPayments.sumOf { it.amount } + customerJobs.sumOf { it.paidAmount }
-    val effectivePaid = maxOf(customer.paidAmount, totalPaid)
+    val totalBilling = if (customerJobs.isNotEmpty()) customerJobs.sumOf { it.finalAmount } else customer.totalAmount
+    val paymentsSum = customerPayments.sumOf { it.amount }
+    val jobsPaidSum = customerJobs.sumOf { it.paidAmount }
+    
+    // Accurate single-counted total paid
+    val effectivePaid = if (customerPayments.isNotEmpty()) {
+        paymentsSum
+    } else if (jobsPaidSum > 0) {
+        jobsPaidSum
+    } else {
+        customer.paidAmount
+    }
+    
     val pendingDue = maxOf(0.0, totalBilling - effectivePaid)
 
     Scaffold(
