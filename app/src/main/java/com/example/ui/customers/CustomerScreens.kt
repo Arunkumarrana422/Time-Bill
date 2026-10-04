@@ -216,7 +216,7 @@ fun CustomerListScreen(
             } else {
                 LazyColumn(
                     state = listState,
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 80.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(filteredCustomers, key = { it.customerId }) { customer ->
@@ -341,16 +341,17 @@ fun CustomerCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(cardShape)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
         shape = cardShape,
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 6.dp else 4.dp, pressedElevation = 7.dp)
+        border = if (isSelected) BorderStroke(2.dp, Color.Gray) else null,
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

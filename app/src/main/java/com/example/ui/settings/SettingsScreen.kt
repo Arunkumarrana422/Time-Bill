@@ -403,6 +403,7 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Business Management", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     
                     SettingsActionItem(
                         icon = Icons.Default.Build,

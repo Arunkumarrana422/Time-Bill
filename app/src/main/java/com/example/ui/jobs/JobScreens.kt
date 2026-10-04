@@ -119,7 +119,7 @@ fun JobListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
         ) {
             // Search Input
             OutlinedTextField(
@@ -182,7 +182,10 @@ fun JobListScreen(
                     }
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LazyColumn(
+                    contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     items(filteredJobs) { job ->
                         JobCard(job = job, onClick = { onNavigate(Screen.JobDetail.createRoute(job.jobId)) })
                     }
@@ -346,8 +349,8 @@ fun JobDetailScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+                .padding(padding),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
