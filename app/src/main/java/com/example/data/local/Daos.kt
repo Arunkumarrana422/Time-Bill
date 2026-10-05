@@ -32,6 +32,9 @@ interface CustomerDao {
 
     @Query("DELETE FROM customers WHERE customerId = :customerId")
     suspend fun deleteCustomerById(customerId: String)
+
+    @Query("DELETE FROM customers WHERE userId = :userId")
+    suspend fun deleteAllCustomers(userId: String)
 }
 
 @Dao
@@ -50,6 +53,9 @@ interface ServiceDao {
 
     @Delete
     suspend fun deleteService(service: ServiceItem)
+
+    @Query("DELETE FROM services WHERE userId = :userId")
+    suspend fun deleteAllServices(userId: String)
 }
 
 @Dao
@@ -68,6 +74,9 @@ interface JobDao {
 
     @Delete
     suspend fun deleteJob(job: Job)
+
+    @Query("DELETE FROM jobs WHERE userId = :userId")
+    suspend fun deleteAllJobs(userId: String)
 }
 
 @Dao
@@ -83,6 +92,9 @@ interface PaymentDao {
 
     @Delete
     suspend fun deletePayment(payment: Payment)
+
+    @Query("DELETE FROM payments WHERE userId = :userId")
+    suspend fun deleteAllPayments(userId: String)
 }
 
 @Dao
@@ -95,4 +107,7 @@ interface ExpenseDao {
 
     @Delete
     suspend fun deleteExpense(expense: Expense)
+
+    @Query("DELETE FROM expenses WHERE userId = :userId")
+    suspend fun deleteAllExpenses(userId: String)
 }

@@ -366,4 +366,46 @@ class TimeBillRepository(private val context: Context) {
             }
         }
     }
+
+    suspend fun eraseAllUserDataExceptProfile(userId: String) {
+        withContext(Dispatchers.IO) {
+            // 1. Delete all local Room data for this user except UserProfile
+            appDb.customerDao().deleteAllCustomers(userId)
+            appDb.jobDao().deleteAllJobs(userId)
+            appDb.paymentDao().deleteAllPayments(userId)
+            appDb.expenseDao().deleteAllExpenses(userId)
+            appDb.serviceDao().deleteAllServices(userId)
+
+            // Stop any running or active timer
+            try {
+                com.example.service.TimerStateManager.stopTimer(context)
+            } catch (e: Exception) {
+                Log.e("Repo", "Error stopping timer on erase", e)
+            }
+
+            // 2. Delete all user data in Firestore except users/{userId} profile document
+            if (userId.isNotEmpty() && userId != "local_offline_user") {
+                val subcollections = listOf("customers", "jobs", "payments", "expenses", "services")
+                for (col in subcollections) {
+                    try {
+                        val snapshot = db.collection("users").document(userId).collection(col).get().await()
+                        val docs = snapshot.documents
+                        if (docs.isNotEmpty()) {
+                            val chunks = docs.chunked(450)
+                            for (chunk in chunks) {
+                                val batch = db.batch()
+                                for (doc in chunk) {
+                                    batch.delete(doc.reference)
+                                }
+                                batch.commit().await()
+                            }
+                        }
+                        Log.d("Repo", "Successfully erased Firestore subcollection $col for user $userId")
+                    } catch (e: Exception) {
+                        Log.e("Repo", "Error deleting Firestore subcollection $col", e)
+                    }
+                }
+            }
+        }
+    }
 }

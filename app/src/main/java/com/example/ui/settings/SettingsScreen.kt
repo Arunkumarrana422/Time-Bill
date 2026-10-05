@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,6 +78,9 @@ fun SettingsScreen(
     val userProfile = localProfileOverride ?: observedProfile
 
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showEraseDataDialog by remember { mutableStateOf(false) }
+    var eraseConfirmationText by remember { mutableStateOf("") }
+    var isErasingData by remember { mutableStateOf(false) }
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var isPhotoLoading by remember { mutableStateOf(false) }
 
@@ -444,33 +448,76 @@ fun SettingsScreen(
 
 
 
-            // Account Actions / Logout Section
+            // Account Actions / Logout & Erase All Data Section
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Clean Outlined Logout Button (Border Only, No Heavy Highlight Card)
-            OutlinedButton(
-                onClick = { showLogoutDialog = true },
-                shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.error),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Logout,
-                    contentDescription = "Logout",
-                    tint = MaterialTheme.colorScheme.error
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Logout",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.error
-                )
+                // Clean Outlined Logout Button (Border Only)
+                OutlinedButton(
+                    onClick = { showLogoutDialog = true },
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp)
+                        .testTag("logout_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Logout,
+                        contentDescription = "Logout",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Logout",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.error,
+                        maxLines = 1
+                    )
+                }
+
+                // Clean Outlined Erase All Data Button (Border Only, to the right of Logout)
+                OutlinedButton(
+                    onClick = {
+                        eraseConfirmationText = ""
+                        showEraseDataDialog = true
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp)
+                        .testTag("erase_all_data_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DeleteForever,
+                        contentDescription = "Erase All Data",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Erase All Data",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.error,
+                        maxLines = 1
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -609,6 +656,156 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showEraseDataDialog) {
+        val isConfirmed = eraseConfirmationText.trim().equals("DELETE", ignoreCase = true)
+
+        AlertDialog(
+            onDismissRequest = {
+                if (!isErasingData) {
+                    showEraseDataDialog = false
+                    eraseConfirmationText = ""
+                }
+            },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(36.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Erase All Data?",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "This will permanently delete ALL data from the application and Firestore cloud database:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text("❌ All Customers & Balances", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text("❌ All Jobs & Work Records", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text("❌ All Payments & Invoices", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text("❌ All Diesel & Expense Entries", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text("❌ Custom Services", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    Text(
+                        text = "✅ Your User Profile & Login Account will remain saved.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        text = "To confirm permanent deletion, type DELETE below:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    OutlinedTextField(
+                        value = eraseConfirmationText,
+                        onValueChange = { eraseConfirmationText = it },
+                        placeholder = { Text("Type DELETE here") },
+                        singleLine = true,
+                        enabled = !isErasingData,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("erase_confirmation_input")
+                    )
+
+                    if (isErasingData) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                        ) {
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = "Erasing data from device and Firestore...",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            isErasingData = true
+                            try {
+                                repository.eraseAllUserDataExceptProfile(currentUserId)
+                                Toast.makeText(
+                                    context,
+                                    "All data has been erased successfully! Profile kept safe.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                showEraseDataDialog = false
+                                eraseConfirmationText = ""
+                            } catch (e: Exception) {
+                                Toast.makeText(
+                                    context,
+                                    "Error erasing data: ${e.localizedMessage}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } finally {
+                                isErasingData = false
+                            }
+                        }
+                    },
+                    enabled = isConfirmed && !isErasingData,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.testTag("confirm_erase_button")
+                ) {
+                    if (isErasingData) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onError,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Erase All Data")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showEraseDataDialog = false
+                        eraseConfirmationText = ""
+                    },
+                    enabled = !isErasingData
+                ) {
                     Text("Cancel")
                 }
             }
