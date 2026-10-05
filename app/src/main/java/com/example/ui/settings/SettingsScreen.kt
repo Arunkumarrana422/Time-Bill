@@ -781,7 +781,7 @@ fun SettingsScreen(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Text(
-                                text = "Erasing data from device and Firestore...",
+                                text = "Erasing data from device and database...",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.error
                             )

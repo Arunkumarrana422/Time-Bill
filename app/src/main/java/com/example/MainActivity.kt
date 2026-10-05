@@ -78,16 +78,27 @@ class MainActivity : ComponentActivity() {
 
                 var userProfile by remember { mutableStateOf<UserProfile?>(null) }
 
-                // Persistent offline toast loop & auto-sync when online
-                LaunchedEffect(isConnected) {
-                    if (!isConnected) {
-                        while (true) {
-                            try {
-                                Toast.makeText(context, "No internet connection", Toast.LENGTH_LONG).show()
-                            } catch (e: Exception) {}
-                            delay(4000)
-                        }
-                    } else {
+                val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+                var isAppResumed by remember { mutableStateOf(true) }
+
+                DisposableEffect(lifecycleOwner) {
+                    val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                        isAppResumed = (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME)
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose {
+                        lifecycleOwner.lifecycle.removeObserver(observer)
+                    }
+                }
+
+                // Show offline toast at most once only when active in foreground, never loop or repeat when minimized
+                var previousConnected by remember { mutableStateOf<Boolean?>(null) }
+                LaunchedEffect(isConnected, isAppResumed) {
+                    if (isAppResumed && previousConnected == true && !isConnected) {
+                        try {
+                            Toast.makeText(context, "No internet connection", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {}
+                    } else if (isConnected && previousConnected != true) {
                         currentUser?.uid?.let { uid ->
                             scope.launch {
                                 try {
@@ -98,6 +109,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                    previousConnected = isConnected
                 }
 
                 DisposableEffect(Unit) {
