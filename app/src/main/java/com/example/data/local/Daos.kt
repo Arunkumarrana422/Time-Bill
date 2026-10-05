@@ -18,7 +18,7 @@ interface UserDao {
 
 @Dao
 interface CustomerDao {
-    @Query("SELECT * FROM customers WHERE userId = :userId ORDER BY name ASC")
+    @Query("SELECT * FROM customers WHERE userId = :userId ORDER BY updatedAt DESC, customerId DESC")
     fun observeCustomers(userId: String): Flow<List<Customer>>
 
     @Query("SELECT * FROM customers WHERE customerId = :customerId")

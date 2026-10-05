@@ -1,5 +1,6 @@
 package com.example.ui.customers
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -34,6 +36,7 @@ fun AddCustomerScreen(
 ) {
     BackHandler { onBack() }
 
+    val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var mobile by remember { mutableStateOf("") }
     var village by remember { mutableStateOf("") }
@@ -158,11 +161,12 @@ fun AddCustomerScreen(
                     }
                     isSaving = true
                     scope.launch {
+                        val trimmedName = name.trim()
                         val customerId = "cust_${System.currentTimeMillis()}"
                         val newCustomer = Customer(
                             customerId = customerId,
                             userId = currentUserId,
-                            name = name.trim(),
+                            name = trimmedName,
                             mobile = mobile.trim(),
                             village = village.trim(),
                             address = "",
@@ -174,6 +178,7 @@ fun AddCustomerScreen(
                             updatedAt = System.currentTimeMillis()
                         )
                         repository.saveCustomer(newCustomer)
+                        Toast.makeText(context, "Add New customer", Toast.LENGTH_SHORT).show()
                         isSaving = false
                         onBack()
                     }

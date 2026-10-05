@@ -495,7 +495,8 @@ fun TimerScreen(
                                         userId = currentUserId,
                                         name = newCustomerName.trim(),
                                         mobile = newCustomerMobile.trim(),
-                                        village = newCustomerVillage.trim()
+                                        village = newCustomerVillage.trim(),
+                                        updatedAt = System.currentTimeMillis()
                                     )
                                     repository.saveCustomer(newCust)
                                     selectedCustomer = newCust

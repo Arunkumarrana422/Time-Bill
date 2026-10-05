@@ -52,6 +52,7 @@ fun CustomerListScreen(
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
     val paymentsState = repository.observePayments(currentUserId).collectAsState(initial = emptyList())
 
+    var filterStatus by remember { mutableStateOf("All") }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCustomerIds by remember { mutableStateOf(setOf<String>()) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -68,6 +69,15 @@ fun CustomerListScreen(
 
     val listState = rememberLazyListState()
 
+    // When customers list updates and new customer added, scroll to top so they appear right at top
+    var previousCount by remember { mutableIntStateOf(customersState.value.size) }
+    LaunchedEffect(customersState.value.size) {
+        if (customersState.value.size > previousCount) {
+            listState.animateScrollToItem(0)
+        }
+        previousCount = customersState.value.size
+    }
+
     // Hide FAB while scrolling down, show when scrolling up or at top / stopped
     val isFabVisible by remember {
         derivedStateOf {
@@ -75,10 +85,64 @@ fun CustomerListScreen(
         }
     }
 
-    val filteredCustomers = customersState.value.filter {
-        it.name.contains(searchQuery, ignoreCase = true) ||
-        it.mobile.contains(searchQuery, ignoreCase = true) ||
-        it.village.contains(searchQuery, ignoreCase = true)
+    val allCustomers = customersState.value
+    val pendingCustomers = remember(allCustomers, jobsState.value, paymentsState.value) {
+        allCustomers.filter { customer ->
+            val customerJobs = jobsState.value.filter { it.customerId == customer.customerId }
+            val customerPayments = paymentsState.value.filter { it.customerId == customer.customerId }
+            val totalBilled = if (customerJobs.isNotEmpty()) customerJobs.sumOf { it.finalAmount } else customer.totalAmount
+            val paymentsSum = customerPayments.sumOf { it.amount }
+            val jobsPaidSum = customerJobs.sumOf { it.paidAmount }
+            val effectivePaid = if (customerPayments.isNotEmpty()) {
+                paymentsSum
+            } else if (jobsPaidSum > 0) {
+                jobsPaidSum
+            } else {
+                customer.paidAmount
+            }
+            val pendingDue = maxOf(0.0, totalBilled - effectivePaid)
+            pendingDue > 0
+        }
+    }
+    val paidCustomers = remember(allCustomers, jobsState.value, paymentsState.value) {
+        allCustomers.filter { customer ->
+            val customerJobs = jobsState.value.filter { it.customerId == customer.customerId }
+            val customerPayments = paymentsState.value.filter { it.customerId == customer.customerId }
+            val totalBilled = if (customerJobs.isNotEmpty()) customerJobs.sumOf { it.finalAmount } else customer.totalAmount
+            val paymentsSum = customerPayments.sumOf { it.amount }
+            val jobsPaidSum = customerJobs.sumOf { it.paidAmount }
+            val effectivePaid = if (customerPayments.isNotEmpty()) {
+                paymentsSum
+            } else if (jobsPaidSum > 0) {
+                jobsPaidSum
+            } else {
+                customer.paidAmount
+            }
+            val pendingDue = maxOf(0.0, totalBilled - effectivePaid)
+            pendingDue <= 0
+        }
+    }
+
+    val baseCustomers = when (filterStatus) {
+        "Pending" -> pendingCustomers
+        "Paid" -> paidCustomers
+        else -> allCustomers
+    }
+
+    val filteredCustomers = remember(baseCustomers, searchQuery) {
+        val filtered = if (searchQuery.isBlank()) {
+            baseCustomers
+        } else {
+            baseCustomers.filter {
+                it.name.contains(searchQuery, ignoreCase = true) ||
+                it.mobile.contains(searchQuery, ignoreCase = true) ||
+                it.village.contains(searchQuery, ignoreCase = true)
+            }
+        }
+        filtered.sortedWith(
+            compareByDescending<Customer> { it.updatedAt }
+                .thenByDescending { it.customerId }
+        )
     }
 
     Scaffold(
@@ -194,28 +258,57 @@ fun CustomerListScreen(
                 .padding(padding)
         ) {
             Box(modifier = Modifier.padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 8.dp)) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search customer, mobile, village...", maxLines = 1) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear")
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search customer, mobile, village...", maxLines = 1) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear")
+                                }
                             }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    maxLines = 1,
-                    shape = RoundedCornerShape(12.dp)
-                )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        maxLines = 1,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = filterStatus == "All",
+                            onClick = { filterStatus = "All" },
+                            label = { Text("All (${allCustomers.size})", fontWeight = if (filterStatus == "All") FontWeight.Bold else FontWeight.Normal) }
+                        )
+                        FilterChip(
+                            selected = filterStatus == "Pending",
+                            onClick = { filterStatus = "Pending" },
+                            label = { Text("Pending Dues (${pendingCustomers.size})", fontWeight = if (filterStatus == "Pending") FontWeight.Bold else FontWeight.Normal) }
+                        )
+                        FilterChip(
+                            selected = filterStatus == "Paid",
+                            onClick = { filterStatus = "Paid" },
+                            label = { Text("Paid (${paidCustomers.size})", fontWeight = if (filterStatus == "Paid") FontWeight.Bold else FontWeight.Normal) }
+                        )
+                    }
+                }
             }
 
             if (filteredCustomers.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text("No customers found.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = if (filterStatus == "Pending") "No pending dues found! All customers are paid." else "No customers found.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             } else {
                 LazyColumn(
