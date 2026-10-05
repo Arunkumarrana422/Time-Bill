@@ -125,11 +125,15 @@ fun ReceivePaymentScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Customer Information Section
+            val isDark = androidx.compose.foundation.isSystemInDarkTheme()
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
+                ),
+                border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+                elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 3.dp, pressedElevation = 6.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Customer Information", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -276,8 +280,11 @@ fun ReceivePaymentScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
+                ),
+                border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+                elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 3.dp, pressedElevation = 6.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text("Payment Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

@@ -109,7 +109,10 @@ fun DashboardScreen(
             },
             bottomBar = {
                 if (showBottomBar) {
-                    NavigationBar {
+                    NavigationBar(
+                        tonalElevation = 0.dp,
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ) {
                         NavigationBarItem(
                             icon = { Icon(Icons.Default.Home, contentDescription = null) },
                             label = { Text("Home") },
@@ -340,13 +343,17 @@ fun DashboardScreen(
                     }
                 } else {
                     items(jobsState.value.take(5)) { job ->
+                        val isDark = androidx.compose.foundation.isSystemInDarkTheme()
                         val jobCardShape = RoundedCornerShape(14.dp)
                         Card(
                             onClick = { onNavigate(Screen.JobDetail.createRoute(job.jobId)) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = jobCardShape,
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
+                            ),
+                            border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+                            elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 4.dp, pressedElevation = 7.dp)
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -355,7 +362,8 @@ fun DashboardScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(job.customerName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    Text("${job.serviceName} • ${job.date}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(job.serviceName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                     Text(job.date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
                                     Text("Duration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m", style = MaterialTheme.typography.bodySmall)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
@@ -442,12 +450,29 @@ fun MetricCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     containerColor: androidx.compose.ui.graphics.Color
 ) {
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     val cardShape = RoundedCornerShape(16.dp)
+    
+    val finalContainerColor = if (isDark) {
+        containerColor.copy(alpha = 0.32f)
+    } else {
+        containerColor
+    }
+    
+    val borderColor = if (isDark) {
+        containerColor.copy(alpha = 0.75f)
+    } else {
+        containerColor.copy(alpha = 0.3f)
+    }
+
     Card(
         modifier = modifier,
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = finalContainerColor
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, borderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 2.dp else 4.dp, pressedElevation = 7.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -457,13 +482,27 @@ fun MetricCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(title, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
-                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(
+                    title, 
+                    style = MaterialTheme.typography.bodySmall, 
+                    fontWeight = FontWeight.Medium,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Icon(
+                    icon, 
+                    contentDescription = null, 
+                    modifier = Modifier.size(20.dp),
+                    tint = if (isDark) containerColor else MaterialTheme.colorScheme.primary
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(subtitle, style = MaterialTheme.typography.bodySmall)
+            Text(
+                subtitle, 
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isDark) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

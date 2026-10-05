@@ -73,7 +73,7 @@ fun ServiceListScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(servicesState.value) { service ->

@@ -135,7 +135,10 @@ fun CustomerListScreen(
         },
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(
+                    tonalElevation = 0.dp,
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Home, contentDescription = null) },
                         label = { Text("Home") },
@@ -217,7 +220,7 @@ fun CustomerListScreen(
             } else {
                 LazyColumn(
                     state = listState,
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 80.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(filteredCustomers, key = { it.customerId }) { customer ->
@@ -337,6 +340,7 @@ fun CustomerCard(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     val cardShape = RoundedCornerShape(14.dp)
     
     Card(
@@ -344,10 +348,14 @@ fun CustomerCard(
             .fillMaxWidth(),
         shape = cardShape,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
         ),
-        border = if (isSelected) BorderStroke(2.dp, Color.Gray) else null,
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
+        border = when {
+            isSelected -> BorderStroke(2.dp, Color.Gray)
+            isDark -> BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
+            else -> null
+        },
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 4.dp, pressedElevation = 7.dp)
     ) {
         Box(
             modifier = Modifier

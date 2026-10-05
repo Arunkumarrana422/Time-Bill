@@ -84,7 +84,10 @@ fun JobListScreen(
         },
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(
+                    tonalElevation = 0.dp,
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Home, contentDescription = null) },
                         label = { Text("Home") },
@@ -188,7 +191,7 @@ fun JobListScreen(
                 }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(filteredJobs) { job ->
@@ -203,14 +206,18 @@ fun JobListScreen(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun JobCard(job: Job, onClick: () -> Unit) {
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     val isPaid = job.pendingAmount <= 0
     val cardShape = RoundedCornerShape(14.dp)
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
+        ),
+        border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 4.dp, pressedElevation = 7.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -360,11 +367,15 @@ fun JobDetailScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
+                val isDark = androidx.compose.foundation.isSystemInDarkTheme()
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = detailCardShape,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
+                    ),
+                    border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+                    elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 4.dp, pressedElevation = 7.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

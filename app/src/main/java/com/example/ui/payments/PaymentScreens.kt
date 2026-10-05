@@ -118,12 +118,16 @@ fun PaymentListScreen(
                             else -> "Payment for Service"
                         }
 
+                        val isDark = androidx.compose.foundation.isSystemInDarkTheme()
                         val paymentCardShape = RoundedCornerShape(14.dp)
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = paymentCardShape,
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
+                            ),
+                            border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+                            elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 4.dp, pressedElevation = 7.dp)
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp).fillMaxWidth(),

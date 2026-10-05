@@ -168,7 +168,10 @@ fun SettingsScreen(
         },
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(
+                    tonalElevation = 0.dp,
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Home, contentDescription = null) },
                         label = { Text("Home") },
@@ -252,12 +255,16 @@ fun SettingsScreen(
             }
 
             // User Profile Card with Material 3 elevated shadow
+            val isDark = androidx.compose.foundation.isSystemInDarkTheme()
             val profileCardShape = RoundedCornerShape(18.dp)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = profileCardShape,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
+                ),
+                border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+                elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 4.dp, pressedElevation = 7.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp).fillMaxWidth(),
@@ -399,8 +406,11 @@ fun SettingsScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = manageCardShape,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
+                ),
+                border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+                elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 4.dp, pressedElevation = 7.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Business Management", fontWeight = FontWeight.Bold, fontSize = 16.sp)
