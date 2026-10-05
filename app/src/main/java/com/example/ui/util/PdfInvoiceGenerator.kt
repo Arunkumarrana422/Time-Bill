@@ -175,7 +175,8 @@ object PdfInvoiceGenerator {
             paint.textSize = 11f
             paint.isFakeBoldText = false
             canvas.drawText("Thank you for your business! Generated via Time Bill App.", 40f, footerY, paint)
-            canvas.drawText("Authorized Signatory", 420f, footerY, paint)
+            val ownerName = userProfile?.name?.takeIf { it.isNotBlank() } ?: "Authorized Signatory"
+            canvas.drawText(ownerName, 420f, footerY, paint)
             canvas.drawLine(415f, footerY - 15f, 555f, footerY - 15f, Paint().apply { color = Color.parseColor("#94A3B8"); strokeWidth = 1f })
 
             pdfDocument.finishPage(page)
