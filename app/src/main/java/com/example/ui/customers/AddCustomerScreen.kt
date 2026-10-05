@@ -99,13 +99,15 @@ fun AddCustomerScreen(
                     OutlinedTextField(
                         value = mobile,
                         onValueChange = {
-                            mobile = it
+                            if (it.all { ch -> ch.isDigit() }) {
+                                mobile = it.take(10)
+                            }
                             if (errorMessage != null) errorMessage = null
                         },
                         label = { Text("Mobile Number *") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -150,8 +152,8 @@ fun AddCustomerScreen(
                         errorMessage = "Please enter customer name."
                         return@Button
                     }
-                    if (mobile.isBlank()) {
-                        errorMessage = "Please enter mobile number."
+                    if (mobile.isBlank() || mobile.length != 10) {
+                        errorMessage = "Please enter a valid 10-digit mobile number."
                         return@Button
                     }
                     isSaving = true

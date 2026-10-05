@@ -23,6 +23,7 @@ import com.example.ui.services.ServiceListScreen
 import com.example.ui.setup.SetupScreen
 import com.example.ui.timer.ManualJobScreen
 import com.example.ui.timer.TimerScreen
+import com.example.ui.settings.UpdatePasswordScreen
 
 sealed class Screen(val route: String) {
     object Onboarding : Screen("onboarding")
@@ -50,6 +51,7 @@ sealed class Screen(val route: String) {
     object Reports : Screen("reports")
     object Calendar : Screen("calendar")
     object Settings : Screen("settings")
+    object UpdatePassword : Screen("update_password")
 }
 
 @Composable
@@ -204,6 +206,11 @@ fun TimeBillNavGraph(
             CalendarScreen(
                 currentUserId = currentUserId,
                 repository = repository,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Screen.UpdatePassword.route) {
+            UpdatePasswordScreen(
                 onBack = { navController.popBackStack() }
             )
         }

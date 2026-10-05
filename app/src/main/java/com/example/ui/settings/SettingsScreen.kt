@@ -78,7 +78,6 @@ fun SettingsScreen(
 
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showEditProfileDialog by remember { mutableStateOf(false) }
-    var showPasswordBottomSheet by remember { mutableStateOf(false) }
     var isPhotoLoading by remember { mutableStateOf(false) }
 
     var editName by remember { mutableStateOf("") }
@@ -438,7 +437,7 @@ fun SettingsScreen(
                         icon = Icons.Default.Lock,
                         title = "Update Password",
                         subtitle = "Change your account password securely",
-                        onClick = { showPasswordBottomSheet = true }
+                        onClick = { onNavigate(Screen.UpdatePassword.route) }
                     )
                 }
             }
@@ -575,7 +574,7 @@ fun SettingsScreen(
                                 // ignore
                             }
                             repository.saveUserProfile(updated)
-                            Toast.makeText(context, "Profile updated successfully! / प्रोफ़ाइल सुरक्षित हो गई", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Profile updated successfully!", Toast.LENGTH_SHORT).show()
                             showEditProfileDialog = false
                         }
                     }
@@ -614,126 +613,6 @@ fun SettingsScreen(
                 }
             }
         )
-    }
-
-    if (showPasswordBottomSheet) {
-        val sheetState = rememberModalBottomSheetState()
-        ModalBottomSheet(
-            onDismissRequest = { showPasswordBottomSheet = false },
-            sheetState = sheetState
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
-                    .navigationBarsPadding()
-                    .imePadding()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Update Password", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    IconButton(onClick = { showPasswordBottomSheet = false }) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
-                    }
-                }
-                HorizontalDivider()
-
-                var sheetOldPassword by remember { mutableStateOf("") }
-                var sheetNewPassword by remember { mutableStateOf("") }
-                var sheetReEnterPassword by remember { mutableStateOf("") }
-                var sheetPasswordError by remember { mutableStateOf<String?>(null) }
-                var sheetIsUpdating by remember { mutableStateOf(false) }
-
-                OutlinedTextField(
-                    value = sheetOldPassword,
-                    onValueChange = { sheetOldPassword = it; sheetPasswordError = null },
-                    label = { Text("Old Password") },
-                    singleLine = true,
-                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = sheetNewPassword,
-                    onValueChange = { sheetNewPassword = it; sheetPasswordError = null },
-                    label = { Text("New Password") },
-                    singleLine = true,
-                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = sheetReEnterPassword,
-                    onValueChange = { sheetReEnterPassword = it; sheetPasswordError = null },
-                    label = { Text("Re-enter New Password") },
-                    singleLine = true,
-                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                if (sheetPasswordError != null) {
-                    Text(
-                        text = sheetPasswordError!!,
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                Button(
-                    onClick = {
-                        when {
-                            sheetOldPassword.isBlank() || sheetNewPassword.isBlank() || sheetReEnterPassword.isBlank() -> {
-                                sheetPasswordError = "Please fill in all password fields. / सभी फील्ड भरें"
-                            }
-                            sheetNewPassword.length < 6 -> {
-                                sheetPasswordError = "New password must be at least 6 characters. / नया पासवर्ड कम से कम 6 अक्षर का होना चाहिए"
-                            }
-                            sheetNewPassword != sheetReEnterPassword -> {
-                                sheetPasswordError = "New passwords do not match! / नए पासवर्ड मेल नहीं खाते"
-                            }
-                            else -> {
-                                scope.launch {
-                                    sheetIsUpdating = true
-                                    try {
-                                        val user = auth.currentUser
-                                        if (user != null && !user.email.isNullOrBlank()) {
-                                            val credential = EmailAuthProvider.getCredential(user.email!!, sheetOldPassword)
-                                            user.reauthenticate(credential).await()
-                                            user.updatePassword(sheetNewPassword).await()
-                                            Toast.makeText(context, "Password updated successfully! / पासवर्ड बदल गया", Toast.LENGTH_SHORT).show()
-                                            showPasswordBottomSheet = false
-                                        } else {
-                                            Toast.makeText(context, "Password updated successfully!", Toast.LENGTH_SHORT).show()
-                                            showPasswordBottomSheet = false
-                                        }
-                                    } catch (e: Exception) {
-                                        sheetPasswordError = "Failed: ${e.localizedMessage ?: "Invalid old password or error"}"
-                                    }
-                                    sheetIsUpdating = false
-                                }
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !sheetIsUpdating
-                ) {
-                    if (sheetIsUpdating) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Text("Update Password", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                }
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-        }
     }
 }
 
