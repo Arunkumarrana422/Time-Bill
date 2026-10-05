@@ -99,17 +99,23 @@ fun AddCustomerScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    val isMobileError = (errorMessage != null && (mobile.isBlank() || mobile.length != 10)) || (mobile.isNotEmpty() && mobile.length < 10)
                     OutlinedTextField(
                         value = mobile,
                         onValueChange = {
-                            if (it.all { ch -> ch.isDigit() }) {
-                                mobile = it.take(10)
-                            }
+                            val digits = it.filter { ch -> ch.isDigit() }.take(10)
+                            mobile = digits
                             if (errorMessage != null) errorMessage = null
                         },
                         label = { Text("Mobile Number *") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         singleLine = true,
+                        isError = isMobileError,
+                        supportingText = {
+                            if (mobile.isNotEmpty() && mobile.length < 10) {
+                                Text("Mobile number must be 10 digits (${mobile.length}/10)", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            }
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()

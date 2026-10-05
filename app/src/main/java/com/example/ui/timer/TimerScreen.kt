@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.*
@@ -69,6 +71,8 @@ fun TimerScreen(
     var newCustomerName by remember { mutableStateOf("") }
     var newCustomerMobile by remember { mutableStateOf("") }
     var newCustomerVillage by remember { mutableStateOf("") }
+    var customerMobileError by remember { mutableStateOf<String?>(null) }
+    var customerNameError by remember { mutableStateOf<String?>(null) }
 
     var showAddServiceDialog by remember { mutableStateOf(false) }
     var newServiceName by remember { mutableStateOf("") }
@@ -450,26 +454,60 @@ fun TimerScreen(
         // Quick Add Customer Dialog
         if (showAddCustomerDialog) {
             AlertDialog(
-                onDismissRequest = { showAddCustomerDialog = false },
+                onDismissRequest = {
+                    showAddCustomerDialog = false
+                    customerNameError = null
+                    customerMobileError = null
+                },
                 title = { Text("Add New Customer", fontWeight = FontWeight.Bold) },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedTextField(
                             value = newCustomerName,
-                            onValueChange = { newCustomerName = it },
+                            onValueChange = {
+                                newCustomerName = it
+                                if (customerNameError != null) customerNameError = null
+                            },
                             label = { Text("Customer Name *") },
                             singleLine = true,
+                            isError = customerNameError != null,
+                            supportingText = {
+                                customerNameError?.let {
+                                    Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp)
                         )
+
+                        val isMobileError = customerMobileError != null || (newCustomerMobile.isNotEmpty() && newCustomerMobile.length < 10)
                         OutlinedTextField(
                             value = newCustomerMobile,
-                            onValueChange = { newCustomerMobile = it },
+                            onValueChange = { input ->
+                                val digitsOnly = input.filter { it.isDigit() }.take(10)
+                                newCustomerMobile = digitsOnly
+                                customerMobileError = if (digitsOnly.isNotEmpty() && digitsOnly.length < 10) {
+                                    "Mobile number must be 10 digits (${digitsOnly.length}/10)"
+                                } else {
+                                    null
+                                }
+                            },
                             label = { Text("Mobile Number") },
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            isError = isMobileError,
+                            supportingText = {
+                                val err = customerMobileError ?: if (newCustomerMobile.isNotEmpty() && newCustomerMobile.length < 10) {
+                                    "Mobile number must be 10 digits (${newCustomerMobile.length}/10)"
+                                } else null
+                                if (err != null) {
+                                    Text(err, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp)
                         )
+
                         OutlinedTextField(
                             value = newCustomerVillage,
                             onValueChange = { newCustomerVillage = it },
@@ -483,29 +521,41 @@ fun TimerScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            if (newCustomerName.isNotBlank()) {
-                                scope.launch {
-                                    val existing = customersState.value.find { it.name.trim().equals(newCustomerName.trim(), ignoreCase = true) }
-                                    val newCust = existing?.copy(
-                                        mobile = if (newCustomerMobile.isNotBlank()) newCustomerMobile.trim() else existing.mobile,
-                                        village = if (newCustomerVillage.isNotBlank()) newCustomerVillage.trim() else existing.village,
-                                        updatedAt = System.currentTimeMillis()
-                                    ) ?: Customer(
-                                        customerId = "cust_${System.currentTimeMillis()}",
-                                        userId = currentUserId,
-                                        name = newCustomerName.trim(),
-                                        mobile = newCustomerMobile.trim(),
-                                        village = newCustomerVillage.trim(),
-                                        updatedAt = System.currentTimeMillis()
-                                    )
-                                    repository.saveCustomer(newCust)
-                                    selectedCustomer = newCust
-                                    customerSearchQuery = newCust.name
-                                    newCustomerName = ""
-                                    newCustomerMobile = ""
-                                    newCustomerVillage = ""
-                                    showAddCustomerDialog = false
-                                }
+                            val trimmedName = newCustomerName.trim()
+                            val trimmedMobile = newCustomerMobile.trim()
+
+                            if (trimmedName.isBlank()) {
+                                customerNameError = "Please enter customer name"
+                                return@Button
+                            }
+                            if (trimmedMobile.isNotEmpty() && trimmedMobile.length < 10) {
+                                customerMobileError = "Mobile number must be 10 digits (${trimmedMobile.length}/10)"
+                                return@Button
+                            }
+
+                            scope.launch {
+                                val existing = customersState.value.find { it.name.trim().equals(trimmedName, ignoreCase = true) }
+                                val newCust = existing?.copy(
+                                    mobile = if (trimmedMobile.isNotBlank()) trimmedMobile else existing.mobile,
+                                    village = if (newCustomerVillage.isNotBlank()) newCustomerVillage.trim() else existing.village,
+                                    updatedAt = System.currentTimeMillis()
+                                ) ?: Customer(
+                                    customerId = "cust_${System.currentTimeMillis()}",
+                                    userId = currentUserId,
+                                    name = trimmedName,
+                                    mobile = trimmedMobile,
+                                    village = newCustomerVillage.trim(),
+                                    updatedAt = System.currentTimeMillis()
+                                )
+                                repository.saveCustomer(newCust)
+                                selectedCustomer = newCust
+                                customerSearchQuery = newCust.name
+                                newCustomerName = ""
+                                newCustomerMobile = ""
+                                newCustomerVillage = ""
+                                customerNameError = null
+                                customerMobileError = null
+                                showAddCustomerDialog = false
                             }
                         }
                     ) {
@@ -513,7 +563,11 @@ fun TimerScreen(
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showAddCustomerDialog = false }) {
+                    TextButton(onClick = {
+                        showAddCustomerDialog = false
+                        customerNameError = null
+                        customerMobileError = null
+                    }) {
                         Text("Cancel")
                     }
                 }

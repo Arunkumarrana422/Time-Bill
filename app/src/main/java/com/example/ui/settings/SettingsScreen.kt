@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -31,6 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -550,11 +552,19 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
+                    val isMobileError = editMobile.isNotEmpty() && editMobile.length < 10
                     OutlinedTextField(
                         value = editMobile,
-                        onValueChange = { editMobile = it },
+                        onValueChange = { editMobile = it.filter { ch -> ch.isDigit() }.take(10) },
                         label = { Text("Mobile Number *") },
                         singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = isMobileError,
+                        supportingText = {
+                            if (isMobileError) {
+                                Text("Mobile number must be 10 digits (${editMobile.length}/10)", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            }
+                        },
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -591,6 +601,10 @@ fun SettingsScreen(
                             val finalName = editName.trim().ifBlank { inferredName }
                             val finalBusiness = editBusinessName.trim().ifBlank { inferredBusiness }
                             val finalMobile = editMobile.trim()
+                            if (finalMobile.isNotEmpty() && finalMobile.length < 10) {
+                                Toast.makeText(context, "Mobile number must be 10 digits", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
                             val finalAddress = editAddress.trim()
                             val finalService = editDefaultService.trim().ifBlank { "Tractor Ploughing" }
                             val finalRate = editDefaultRate.toDoubleOrNull() ?: 1000.0
