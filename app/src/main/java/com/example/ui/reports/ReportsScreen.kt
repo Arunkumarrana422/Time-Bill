@@ -46,17 +46,11 @@ fun ReportsScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.primaryContainer,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text("Business Reports & Analytics", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
         },

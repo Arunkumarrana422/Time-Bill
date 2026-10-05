@@ -105,17 +105,11 @@ fun DashboardScreen(
         Scaffold(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             topBar = {
-                TopAppBar(
+                CenterAlignedTopAppBar(
                     title = { Text("Time Bill Dashboard", fontWeight = FontWeight.Bold) },
-                    actions = {
-                        IconButton(onClick = { onNavigate(Screen.Settings.route) }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Settings")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 )
             },
