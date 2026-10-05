@@ -62,6 +62,7 @@ fun AddCustomerScreen(
                 .padding(padding)
                 .clearFocusOnTap()
                 .verticalScroll(rememberScrollState())
+                .imePadding()
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
