@@ -47,6 +47,7 @@ fun AddCustomerScreen(
     val scope = rememberCoroutineScope()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         topBar = {
             TopAppBar(
                 title = { Text("Add Customer", fontWeight = FontWeight.Bold) },
@@ -55,20 +56,30 @@ fun AddCustomerScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
         }
     ) { padding ->
-        Column(
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .clearFocusOnTap()
-                .verticalScroll(rememberScrollState())
-                .imePadding()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(top = padding.calculateTopPadding()),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clearFocusOnTap()
+                    .verticalScroll(rememberScrollState())
+                    .imePadding()
+                    .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 20.dp + padding.calculateBottomPadding()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             val isDark = androidx.compose.foundation.isSystemInDarkTheme()
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -201,6 +212,7 @@ fun AddCustomerScreen(
                     Text("Save Customer", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
+        }
         }
     }
 }

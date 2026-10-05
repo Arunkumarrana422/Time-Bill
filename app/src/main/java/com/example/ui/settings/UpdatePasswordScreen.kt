@@ -48,6 +48,7 @@ fun UpdatePasswordScreen(
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         topBar = {
             TopAppBar(
                 title = { Text("Update Password", fontWeight = FontWeight.Bold) },
@@ -56,18 +57,28 @@ fun UpdatePasswordScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
         }
     ) { padding ->
-        Column(
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(top = padding.calculateTopPadding()),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 24.dp + padding.calculateBottomPadding()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Change your account password securely",
@@ -207,6 +218,7 @@ fun UpdatePasswordScreen(
                 }
                 Text("Update Password", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
+        }
         }
     }
 }

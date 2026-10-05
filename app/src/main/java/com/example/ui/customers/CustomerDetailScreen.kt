@@ -90,6 +90,7 @@ fun CustomerDetailScreen(
     val pendingDue = maxOf(0.0, totalBilling - effectivePaid)
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         topBar = {
             TopAppBar(
                 title = { Text(customer.name, fontWeight = FontWeight.Bold) },
@@ -113,7 +114,12 @@ fun CustomerDetailScreen(
                         Icon(Icons.Default.Chat, contentDescription = "WhatsApp Reminder", tint = Color(0xFF25D366))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
         },
         floatingActionButton = {
@@ -134,14 +140,20 @@ fun CustomerDetailScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
-            state = listState,
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(top = padding.calculateTopPadding()),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 20.dp + padding.calculateBottomPadding()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // Customer Ledger Summary Card
             item {
                 val summaryCardShape = RoundedCornerShape(16.dp)
@@ -302,6 +314,7 @@ fun CustomerDetailScreen(
                     }
                 }
             }
+        }
         }
     }
 }

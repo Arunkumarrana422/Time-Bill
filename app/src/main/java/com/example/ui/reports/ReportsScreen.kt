@@ -44,6 +44,7 @@ fun ReportsScreen(
     val totalMinutes = jobsState.value.sumOf { it.billableDurationMinutes }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         topBar = {
             TopAppBar(
                 title = { Text("Business Reports & Analytics", fontWeight = FontWeight.Bold) },
@@ -52,7 +53,11 @@ fun ReportsScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
         },
         bottomBar = {
@@ -95,14 +100,20 @@ fun ReportsScreen(
             }
         }
     ) { padding ->
-        Column(
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(top = padding.calculateTopPadding()),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + padding.calculateBottomPadding()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // Net Profit Banner Card
             val isDark = androidx.compose.foundation.isSystemInDarkTheme()
             Card(
@@ -229,6 +240,7 @@ fun ReportsScreen(
                     )
                 }
             }
+        }
         }
     }
 }

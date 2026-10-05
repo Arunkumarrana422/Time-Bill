@@ -47,6 +47,7 @@ fun ServiceListScreen(
     val scope = rememberCoroutineScope()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         topBar = {
             TopAppBar(
                 title = { Text("Services & Rates", fontWeight = FontWeight.Bold) },
@@ -55,7 +56,11 @@ fun ServiceListScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
         },
         floatingActionButton = {
@@ -68,14 +73,20 @@ fun ServiceListScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(top = padding.calculateTopPadding()),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 20.dp + padding.calculateBottomPadding()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
             items(servicesState.value) { service ->
                 val isDark = androidx.compose.foundation.isSystemInDarkTheme()
                 val cardShape = RoundedCornerShape(14.dp)
@@ -114,6 +125,7 @@ fun ServiceListScreen(
                     }
                 }
             }
+        }
         }
 
         if (showAddDialog) {

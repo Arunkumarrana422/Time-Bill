@@ -107,6 +107,7 @@ fun ManualJobScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         topBar = {
             TopAppBar(
                 title = { Text("Manual Job Entry", fontWeight = FontWeight.Bold) },
@@ -115,19 +116,29 @@ fun ManualJobScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
         }
     ) { padding ->
-        Column(
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .clearFocusOnTap()
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(top = padding.calculateTopPadding()),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clearFocusOnTap()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 20.dp + padding.calculateBottomPadding()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             val isDark = androidx.compose.foundation.isSystemInDarkTheme()
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -464,6 +475,7 @@ fun ManualJobScreen(
                     }
                 }
             }
+        }
         }
 
         // Quick Add Customer Dialog (without address field)

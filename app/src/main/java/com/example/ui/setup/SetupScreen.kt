@@ -3,6 +3,7 @@ package com.example.ui.setup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -12,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.UserProfile
@@ -127,10 +129,21 @@ fun SetupScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    val isMobileError = mobile.isNotEmpty() && mobile.length < 10
                     OutlinedTextField(
                         value = mobile,
-                        onValueChange = { mobile = it },
+                        onValueChange = { input ->
+                            val digits = input.filter { it.isDigit() }.take(10)
+                            mobile = digits
+                        },
                         label = { Text("Mobile Number *") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        isError = isMobileError,
+                        supportingText = {
+                            if (isMobileError) {
+                                Text("Mobile number must be 10 digits (${mobile.length}/10)", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp)
@@ -204,8 +217,23 @@ fun SetupScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    var setupErrorMessage by remember { mutableStateOf<String?>(null) }
+                    if (setupErrorMessage != null) {
+                        Text(
+                            text = setupErrorMessage!!,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+
                     Button(
                         onClick = {
+                            val trimmedMobile = mobile.trim()
+                            if (trimmedMobile.isNotEmpty() && trimmedMobile.length < 10) {
+                                setupErrorMessage = "Mobile number must be 10 digits (${trimmedMobile.length}/10)"
+                                return@Button
+                            }
                             val profile = UserProfile(
                                 userId = currentUserId,
                                 name = name.ifBlank { "Owner" },

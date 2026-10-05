@@ -146,6 +146,7 @@ fun CustomerListScreen(
     }
 
     Scaffold(
+        containerColor = if (isSelectionMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
         topBar = {
             if (isSelectionMode) {
                 TopAppBar(
@@ -183,7 +184,12 @@ fun CustomerListScreen(
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primary)
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 )
             } else {
                 TopAppBar(
@@ -193,7 +199,11 @@ fun CustomerListScreen(
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 )
             }
         },
@@ -252,11 +262,18 @@ fun CustomerListScreen(
             }
         }
     ) { padding ->
-        Column(
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(top = padding.calculateTopPadding()),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = padding.calculateBottomPadding())
+            ) {
             Box(modifier = Modifier.padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 8.dp)) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
@@ -369,6 +386,7 @@ fun CustomerListScreen(
                     }
                 }
             }
+        }
         }
     }
 

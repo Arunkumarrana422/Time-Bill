@@ -50,6 +50,7 @@ fun PaymentListScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         topBar = {
             TopAppBar(
                 title = { Text("Payment History", fontWeight = FontWeight.Bold) },
@@ -58,15 +59,26 @@ fun PaymentListScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
         }
     ) { padding ->
-        Column(
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(top = padding.calculateTopPadding()),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = padding.calculateBottomPadding())
+            ) {
             // Search Input Box
             Box(modifier = Modifier.padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 10.dp)) {
                 OutlinedTextField(
@@ -170,6 +182,7 @@ fun PaymentListScreen(
                     }
                 }
             }
+        }
         }
     }
 }

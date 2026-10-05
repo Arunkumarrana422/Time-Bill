@@ -79,7 +79,7 @@ class MainActivity : ComponentActivity() {
                 var userProfile by remember { mutableStateOf<UserProfile?>(null) }
 
                 val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
-                var isAppResumed by remember { mutableStateOf(true) }
+                var isAppResumed by remember { mutableStateOf(lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) }
 
                 DisposableEffect(lifecycleOwner) {
                     val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -93,20 +93,30 @@ class MainActivity : ComponentActivity() {
 
                 // Show offline toast at most once only when active in foreground, never loop or repeat when minimized
                 var previousConnected by remember { mutableStateOf<Boolean?>(null) }
+                var offlineToastShown by remember { mutableStateOf(false) }
+
                 LaunchedEffect(isConnected, isAppResumed) {
-                    if (isAppResumed && previousConnected == true && !isConnected) {
-                        try {
-                            Toast.makeText(context, "No internet connection", Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {}
-                    } else if (isConnected && previousConnected != true) {
-                        currentUser?.uid?.let { uid ->
-                            scope.launch {
-                                try {
-                                    repository.syncDataFromFirestore(uid)
-                                } catch (e: Exception) {
-                                    // ignore
+                    val isActivelyForeground = isAppResumed && lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+                    if (isConnected) {
+                        offlineToastShown = false
+                        if (previousConnected == false) {
+                            currentUser?.uid?.let { uid ->
+                                scope.launch {
+                                    try {
+                                        repository.syncDataFromFirestore(uid)
+                                    } catch (e: Exception) {
+                                        // ignore
+                                    }
                                 }
                             }
+                        }
+                    } else {
+                        // Offline
+                        if (isActivelyForeground && previousConnected == true && !offlineToastShown) {
+                            try {
+                                Toast.makeText(context, "No internet connection", Toast.LENGTH_SHORT).show()
+                                offlineToastShown = true
+                            } catch (e: Exception) {}
                         }
                     }
                     previousConnected = isConnected

@@ -119,6 +119,7 @@ fun TimerScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         topBar = {
             TopAppBar(
                 title = { Text("Work Timer & Billing", fontWeight = FontWeight.Bold) },
@@ -127,20 +128,30 @@ fun TimerScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
         }
     ) { padding ->
-        val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-        Column(
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .clearFocusOnTap()
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(top = padding.calculateTopPadding()),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
+            val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clearFocusOnTap()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 20.dp + padding.calculateBottomPadding()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             if (!isTimerRunning) {
                 // Setup and Start Screen
                 Card(
@@ -449,6 +460,7 @@ fun TimerScreen(
                     Text("Finish & Review Bill", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
+        }
         }
 
         // Quick Add Customer Dialog

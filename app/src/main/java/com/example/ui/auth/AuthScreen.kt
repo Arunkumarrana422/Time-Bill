@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -233,11 +235,22 @@ fun AuthScreen(
                             )
                             Spacer(modifier = Modifier.height(12.dp))
 
+                            val isMobileError = mobile.isNotEmpty() && mobile.length < 10
                             OutlinedTextField(
                                 value = mobile,
-                                onValueChange = { mobile = it },
+                                onValueChange = { input ->
+                                    val digits = input.filter { it.isDigit() }.take(10)
+                                    mobile = digits
+                                },
                                 label = { Text("Mobile Number") },
                                 leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                isError = isMobileError,
+                                supportingText = {
+                                    if (isMobileError) {
+                                        Text("Mobile number must be 10 digits (${mobile.length}/10)", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 shape = RoundedCornerShape(12.dp)
@@ -331,6 +344,10 @@ fun AuthScreen(
                             onClick = {
                                 if (isRegisterMode && fullName.isBlank()) {
                                     errorMessage = "Please enter your full name."
+                                    return@Button
+                                }
+                                if (isRegisterMode && mobile.isNotEmpty() && mobile.length < 10) {
+                                    errorMessage = "Mobile number must be 10 digits (${mobile.length}/10)."
                                     return@Button
                                 }
                                 if (email.isBlank()) {

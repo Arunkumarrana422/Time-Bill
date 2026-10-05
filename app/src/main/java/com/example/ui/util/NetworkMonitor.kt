@@ -85,19 +85,12 @@ fun observeNetworkConnectivity(context: Context): Flow<Boolean> = callbackFlow {
 
     // Emit initial status based on validation check
     val initialBasic = hasBasicCapabilities()
-    trySend(initialBasic)
-
-    // Launch active verification and continuous background reachability probe
-    val probeJob = launch(Dispatchers.IO) {
-        while (isActive) {
-            val basic = hasBasicCapabilities()
-            if (!basic) {
-                trySend(false)
-            } else {
-                val hasRealInternet = checkActualInternetAccess()
-                trySend(hasRealInternet)
-            }
-            delay(3000)
+    if (!initialBasic) {
+        trySend(false)
+    } else {
+        launch(Dispatchers.IO) {
+            val real = checkActualInternetAccess()
+            trySend(real)
         }
     }
 
@@ -142,7 +135,6 @@ fun observeNetworkConnectivity(context: Context): Flow<Boolean> = callbackFlow {
     }
 
     awaitClose {
-        probeJob.cancel()
         try {
             connectivityManager.unregisterNetworkCallback(callback)
         } catch (e: Exception) {
