@@ -1,6 +1,7 @@
 package com.example.ui.settings
 
 import android.content.Context
+import com.example.ui.util.formatIndianCurrency
 import android.graphics.Bitmap
 import android.net.Uri
 import android.widget.Toast
@@ -147,7 +148,7 @@ fun SettingsScreen(
     val displayMobile = userProfile?.mobile?.takeIf { it.isNotBlank() } ?: auth.currentUser?.phoneNumber?.takeIf { it.isNotBlank() } ?: "Not set"
     val displayAddress = userProfile?.address?.takeIf { it.isNotBlank() } ?: "Not set"
     val displayService = userProfile?.defaultService?.takeIf { it.isNotBlank() } ?: "Tractor Ploughing"
-    val displayRate = "₹${userProfile?.defaultRate?.toInt() ?: 1000}/hr"
+    val displayRate = "₹${formatIndianCurrency(userProfile?.defaultRate ?: 1000.0)}/hr"
 
     val isProfileIncomplete = (userProfile?.mobile.isNullOrBlank() || userProfile?.address.isNullOrBlank() || userProfile?.name.isNullOrBlank() || userProfile?.name == "Owner")
 
@@ -385,8 +386,6 @@ fun SettingsScreen(
                             value = displayAddress,
                             valueColor = if (displayAddress == "Not set") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                         )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        ProfileInfoRow(label = "Default Service", value = displayService)
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                         ProfileInfoRow(label = "Default Hourly Rate", value = displayRate)
                     }

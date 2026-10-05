@@ -1,6 +1,7 @@
 package com.example.ui.calendar
 
 import android.app.DatePickerDialog
+import com.example.ui.util.formatIndianCurrency
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -228,7 +229,7 @@ fun CalendarScreen(
                     Text(displayPeriodTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Jobs: ${filteredJobs.size} • Hours: ${totalMinutes / 60}h ${totalMinutes % 60}m • Earnings: ₹${totalEarnings.toInt()}",
+                        "Jobs: ${filteredJobs.size} • Hours: ${totalMinutes / 60}h ${totalMinutes % 60}m • Earnings: ₹${formatIndianCurrency(totalEarnings)}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )
@@ -281,7 +282,7 @@ fun CalendarScreen(
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text(
-                                        "₹${job.finalAmount.toInt()}",
+                                        "₹${formatIndianCurrency(job.finalAmount)}",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 16.sp,
                                         color = MaterialTheme.colorScheme.primary

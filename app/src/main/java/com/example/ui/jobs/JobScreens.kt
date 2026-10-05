@@ -2,6 +2,8 @@ package com.example.ui.jobs
 
 import androidx.activity.compose.BackHandler
 import android.content.Intent
+import com.example.ui.util.formatIndianCurrency
+import com.example.ui.util.PdfInvoiceGenerator
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -244,7 +246,7 @@ fun JobCard(job: Job, onClick: () -> Unit) {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "₹${job.finalAmount.toInt()}",
+                        text = "₹${formatIndianCurrency(job.finalAmount)}",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = MaterialTheme.colorScheme.onSurface
@@ -255,7 +257,7 @@ fun JobCard(job: Job, onClick: () -> Unit) {
                         color = if (isPaid) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
                     ) {
                         Text(
-                            text = if (isPaid) "✓ Paid" else "Pending: ₹${job.pendingAmount.toInt()}",
+                            text = if (isPaid) "Paid" else "Pending: ₹${formatIndianCurrency(job.pendingAmount)}",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                             fontSize = 12.sp,
                             color = if (isPaid) Color(0xFF166534) else Color(0xFF991B1B),
@@ -310,6 +312,8 @@ fun JobDetailScreen(
 ) {
     val context = LocalContext.current
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
+    val userProfileState = repository.observeUserProfile(currentUserId).collectAsState(initial = null)
+    val userProfile = userProfileState.value
     val job = jobsState.value.find { h -> h.jobId == jobId }
 
     if (job == null) {
@@ -333,14 +337,9 @@ fun JobDetailScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        val shareText = "*TIME BILL INVOICE*\nCustomer: ${job.customerName}\nService: ${job.serviceName}\nDate: ${job.date}\nDuration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m\nRate: ₹${job.rate.toInt()}/hr\nTotal Bill: *₹${job.finalAmount.toInt()}*\nTotal Paid: *₹${job.paidAmount.toInt()}*\nStatus: *${if (isPaid) "Paid" else "Pending Due: ₹" + job.pendingAmount.toInt()}*\nThank you for your business!"
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, shareText)
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Share Invoice"))
+                        PdfInvoiceGenerator.generateAndShareInvoicePdf(context, job, userProfile)
                     }) {
-                        Icon(Icons.Default.Share, contentDescription = "Share Invoice")
+                        Icon(Icons.Default.Share, contentDescription = "Share Invoice PDF")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
@@ -380,23 +379,23 @@ fun JobDetailScreen(
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Hourly Rate:", fontWeight = FontWeight.Medium)
-                            Text("₹${job.rate.toInt()}/hr")
+                            Text("₹${formatIndianCurrency(job.rate)}/hr")
                         }
 
                         HorizontalDivider()
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Total Bill Amount:", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                            Text("₹${formatIndianCurrency(job.finalAmount)}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Paid Amount:", fontWeight = FontWeight.Medium)
-                            Text("₹${job.paidAmount.toInt()}", color = Color(0xFF16A34A), fontWeight = FontWeight.SemiBold)
+                            Text("₹${formatIndianCurrency(job.paidAmount)}", color = Color(0xFF16A34A), fontWeight = FontWeight.SemiBold)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Pending Due:", fontWeight = FontWeight.Medium)
                             Text(
-                                text = if (job.pendingAmount > 0) "₹${job.pendingAmount.toInt()}" else "₹0 (Fully Paid)",
+                                text = if (job.pendingAmount > 0) "₹${formatIndianCurrency(job.pendingAmount)}" else "₹0 (Fully Paid)",
                                 color = if (job.pendingAmount > 0) Color(0xFFDC2626) else Color(0xFF16A34A),
                                 fontWeight = FontWeight.Bold
                             )

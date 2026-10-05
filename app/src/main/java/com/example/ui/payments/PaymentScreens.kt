@@ -1,6 +1,7 @@
 package com.example.ui.payments
 
 import androidx.activity.compose.BackHandler
+import com.example.ui.util.formatIndianCurrency
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -145,7 +146,7 @@ fun PaymentListScreen(
                                     )
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("₹${payment.amount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF16A34A))
+                                    Text("₹${formatIndianCurrency(payment.amount)}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF16A34A))
                                     Surface(
                                         shape = RoundedCornerShape(4.dp),
                                         color = Color(0xFFDCFCE7),

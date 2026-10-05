@@ -1,6 +1,7 @@
 package com.example.ui.dashboard
 
 import androidx.activity.compose.BackHandler
+import com.example.ui.util.formatIndianCurrency
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -79,6 +80,13 @@ fun DashboardScreen(
 
     val totalPending = jobsState.value.sumOf { it.pendingAmount }
     val totalReceived = paymentsState.value.sumOf { it.amount }
+    val pendingCustomersCount = remember(customersState.value, jobsState.value) {
+        customersState.value.count { cust ->
+            val custJobs = jobsState.value.filter { it.customerId == cust.customerId }
+            val dues = if (custJobs.isNotEmpty()) custJobs.sumOf { it.pendingAmount } else cust.pendingAmount
+            dues > 0
+        }
+    }
 
     var isLoading by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
@@ -152,7 +160,7 @@ fun DashboardScreen(
                         MetricCard(
                             modifier = Modifier.weight(1f),
                             title = "Today's Earnings",
-                            value = "₹${todayEarnings.toInt()}",
+                            value = "₹${formatIndianCurrency(todayEarnings)}",
                             subtitle = todayHoursFormatted,
                             icon = Icons.Default.TrendingUp,
                             containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -160,8 +168,8 @@ fun DashboardScreen(
                         MetricCard(
                             modifier = Modifier.weight(1f),
                             title = "Pending Payments",
-                            value = "₹${totalPending.toInt()}",
-                            subtitle = "${customersState.value.size} customers",
+                            value = "₹${formatIndianCurrency(totalPending)}",
+                            subtitle = "$pendingCustomersCount customers",
                             icon = Icons.Default.Pending,
                             containerColor = MaterialTheme.colorScheme.errorContainer
                         )
@@ -176,7 +184,7 @@ fun DashboardScreen(
                         MetricCard(
                             modifier = Modifier.weight(1f),
                             title = "Month Earnings",
-                            value = "₹${monthEarnings.toInt()}",
+                            value = "₹${formatIndianCurrency(monthEarnings)}",
                             subtitle = "${monthJobs.size} jobs done",
                             icon = Icons.Default.CalendarMonth,
                             containerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -184,7 +192,7 @@ fun DashboardScreen(
                         MetricCard(
                             modifier = Modifier.weight(1f),
                             title = "Total Received",
-                            value = "₹${totalReceived.toInt()}",
+                            value = "₹${formatIndianCurrency(totalReceived)}",
                             subtitle = "${paymentsState.value.size} payments",
                             icon = Icons.Default.CheckCircle,
                             containerColor = MaterialTheme.colorScheme.tertiaryContainer
@@ -351,14 +359,14 @@ fun DashboardScreen(
                                     Text("Duration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m", style = MaterialTheme.typography.bodySmall)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                                    Text("₹${formatIndianCurrency(job.finalAmount)}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
                                     val isPaid = job.pendingAmount <= 0.0
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
                                         color = if (isPaid) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
                                     ) {
                                         Text(
-                                            text = if (isPaid) "✓ Paid" else "Pending: ₹${job.pendingAmount.toInt()}",
+                                            text = if (isPaid) "Paid" else "Pending: ₹${formatIndianCurrency(job.pendingAmount)}",
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                             fontSize = 11.sp,
                                             color = if (isPaid) Color(0xFF166534) else Color(0xFF991B1B),

@@ -2,6 +2,7 @@ package com.example.ui.customers
 
 import android.content.Intent
 import android.net.Uri
+import com.example.ui.util.formatIndianCurrency
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -410,7 +411,7 @@ fun CustomerCard(
                         }
                         IconButton(
                             onClick = {
-                                val msg = "Hello ${customer.name}, your total bill is ₹${totalBilled.toInt()}, Total Paid: ₹${totalPaid.toInt()}, and Pending Due: ₹${pendingDue.toInt()} for Time Bill work. Thank you!"
+                                val msg = "Hello ${customer.name}, your total bill is ₹${formatIndianCurrency(totalBilled)}, Total Paid: ₹${formatIndianCurrency(totalPaid)}, and Pending Due: ₹${formatIndianCurrency(pendingDue)} for Time Bill work. Thank you!"
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=${customer.mobile}&text=${Uri.encode(msg)}"))
                                 context.startActivity(intent)
                             },
@@ -437,19 +438,23 @@ fun CustomerCard(
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Total Billed", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("₹${totalBilled.toInt()}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    Text("₹${formatIndianCurrency(totalBilled)}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Total Paid", style = MaterialTheme.typography.labelSmall, color = Color(0xFF16A34A))
-                    Text("₹${totalPaid.toInt()}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color(0xFF16A34A))
+                    Text("₹${formatIndianCurrency(totalPaid)}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color(0xFF16A34A))
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Pending Dues", style = MaterialTheme.typography.labelSmall, color = if (pendingDue > 0) Color(0xFFDC2626) else Color(0xFF16A34A))
+                    val isNewCustomer = totalJobsCount == 0
+                    val pendingColor = if (pendingDue > 0) Color(0xFFDC2626) else if (isNewCustomer) Color(0xFF2563EB) else Color(0xFF16A34A)
+                    val pendingText = if (pendingDue > 0) "₹${formatIndianCurrency(pendingDue)}" else if (isNewCustomer) "₹0" else "All Paid"
+
+                    Text("Pending Dues", style = MaterialTheme.typography.labelSmall, color = pendingColor)
                     Text(
-                        text = if (pendingDue > 0) "₹${pendingDue.toInt()}" else "✓ All Paid",
+                        text = pendingText,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (pendingDue > 0) Color(0xFFDC2626) else Color(0xFF16A34A)
+                        color = pendingColor
                     )
                 }
             }

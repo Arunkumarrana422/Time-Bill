@@ -1,6 +1,7 @@
 package com.example.ui.reports
 
 import androidx.activity.compose.BackHandler
+import com.example.ui.util.formatIndianCurrency
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -131,14 +132,14 @@ fun ReportsScreen(
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "₹${netProfit.toInt()}",
+                        text = "₹${formatIndianCurrency(netProfit)}",
                         style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Revenue (₹${totalIncome.toInt()}) - Expenses (₹${totalExpenses.toInt()})",
+                        text = "Revenue (₹${formatIndianCurrency(totalIncome)}) - Expenses (₹${formatIndianCurrency(totalExpenses)})",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
@@ -151,7 +152,7 @@ fun ReportsScreen(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 AnalyticsStatCard(
                     title = "Total Invoiced",
-                    amount = "₹${totalIncome.toInt()}",
+                    amount = "₹${formatIndianCurrency(totalIncome)}",
                     icon = Icons.Default.TrendingUp,
                     cardColor = Color(0xFFE0F2FE),
                     textColor = Color(0xFF0369A1),
@@ -159,7 +160,7 @@ fun ReportsScreen(
                 )
                 AnalyticsStatCard(
                     title = "Total Received",
-                    amount = "₹${totalReceived.toInt()}",
+                    amount = "₹${formatIndianCurrency(totalReceived)}",
                     icon = Icons.Default.CheckCircle,
                     cardColor = Color(0xFFDCFCE7),
                     textColor = Color(0xFF15803D),
@@ -170,7 +171,7 @@ fun ReportsScreen(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 AnalyticsStatCard(
                     title = "Pending Dues",
-                    amount = "₹${totalPending.toInt()}",
+                    amount = "₹${formatIndianCurrency(totalPending)}",
                     icon = Icons.Default.HourglassTop,
                     cardColor = Color(0xFFFFEDD5),
                     textColor = Color(0xFFC2410C),
@@ -178,7 +179,7 @@ fun ReportsScreen(
                 )
                 AnalyticsStatCard(
                     title = "Total Expenses",
-                    amount = "₹${totalExpenses.toInt()}",
+                    amount = "₹${formatIndianCurrency(totalExpenses)}",
                     icon = Icons.Default.ReceiptLong,
                     cardColor = Color(0xFFFFE4E6),
                     textColor = Color(0xFFBE123C),

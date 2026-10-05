@@ -1,6 +1,7 @@
 package com.example.ui.timer
 
 import android.Manifest
+import com.example.ui.util.formatIndianCurrency
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -260,7 +261,7 @@ fun TimerScreen(
                                                     verticalAlignment = Alignment.CenterVertically
                                                 ) {
                                                     Text(service.name, fontWeight = FontWeight.Medium)
-                                                    Text("₹${service.hourlyRate.toInt()}/hr", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                                    Text("₹${formatIndianCurrency(service.hourlyRate)}/hr", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                                 }
                                             },
                                             onClick = {
@@ -389,7 +390,7 @@ fun TimerScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text("Start: $startTimeFormatted", fontWeight = FontWeight.Medium)
-                            Text("Rate: ₹${currentRate.toInt()}/hr", fontWeight = FontWeight.Bold)
+                            Text("Rate: ₹${formatIndianCurrency(currentRate)}/hr", fontWeight = FontWeight.Bold)
                         }
                     }
                 }

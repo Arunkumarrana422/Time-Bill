@@ -2,6 +2,7 @@ package com.example.ui.customers
 
 import android.content.Intent
 import android.net.Uri
+import com.example.ui.util.formatIndianCurrency
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -96,7 +97,7 @@ fun CustomerDetailScreen(
                         Icon(Icons.Default.Phone, contentDescription = "Call")
                     }
                     IconButton(onClick = {
-                        val msg = "Hello ${customer.name}, your total bill is ₹${totalBilling.toInt()}, Total Paid: ₹${effectivePaid.toInt()}, and Pending Due: ₹${pendingDue.toInt()} for Time Bill work. Please make payment at your earliest convenience. Thank you!"
+                        val msg = "Hello ${customer.name}, your total bill is ₹${formatIndianCurrency(totalBilling)}, Total Paid: ₹${formatIndianCurrency(effectivePaid)}, and Pending Due: ₹${formatIndianCurrency(pendingDue)} for Time Bill work. Please make payment at your earliest convenience. Thank you!"
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=${customer.mobile}&text=${Uri.encode(msg)}"))
                         context.startActivity(intent)
                     }) {
@@ -171,19 +172,23 @@ fun CustomerDetailScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("Total Billing", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("₹${totalBilling.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text("₹${formatIndianCurrency(totalBilling)}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
                             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("Total Paid", style = MaterialTheme.typography.bodySmall, color = Color(0xFF16A34A))
-                                Text("₹${effectivePaid.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF16A34A))
+                                Text("₹${formatIndianCurrency(effectivePaid)}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF16A34A))
                             }
                             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                Text("Pending Due", style = MaterialTheme.typography.bodySmall, color = if (pendingDue > 0) Color(0xFFDC2626) else Color(0xFF16A34A))
+                                val isNewCustomer = customerJobs.isEmpty()
+                                val pendingColor = if (pendingDue > 0) Color(0xFFDC2626) else if (isNewCustomer) Color(0xFF2563EB) else Color(0xFF16A34A)
+                                val pendingText = if (pendingDue > 0) "₹${formatIndianCurrency(pendingDue)}" else if (isNewCustomer) "₹0" else "All Paid"
+
+                                Text("Pending Due", style = MaterialTheme.typography.bodySmall, color = pendingColor)
                                 Text(
-                                    text = if (pendingDue > 0) "₹${pendingDue.toInt()}" else "✓ All Paid",
+                                    text = pendingText,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
-                                    color = if (pendingDue > 0) Color(0xFFDC2626) else Color(0xFF16A34A)
+                                    color = pendingColor
                                 )
                             }
                         }
@@ -232,18 +237,18 @@ fun CustomerDetailScreen(
                                 Text("${job.date} • ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 if (!isJobFullyPaid && actualJobPaid > 0) {
                                     Spacer(modifier = Modifier.height(2.dp))
-                                    Text("Paid: ₹${actualJobPaid.toInt()}", style = MaterialTheme.typography.bodySmall, color = Color(0xFF16A34A), fontWeight = FontWeight.Medium)
+                                    Text("Paid: ₹${formatIndianCurrency(actualJobPaid)}", style = MaterialTheme.typography.bodySmall, color = Color(0xFF16A34A), fontWeight = FontWeight.Medium)
                                 }
                             }
                             Column(horizontalAlignment = Alignment.End) {
-                                Text("₹${job.finalAmount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                                Text("₹${formatIndianCurrency(job.finalAmount)}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
                                     color = if (isJobFullyPaid) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
                                 ) {
                                     Text(
-                                        text = if (isJobFullyPaid) "✓ Paid" else "Pending: ₹${actualJobPending.toInt()}",
+                                        text = if (isJobFullyPaid) "Paid" else "Pending: ₹${formatIndianCurrency(actualJobPending)}",
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                         fontSize = 11.sp,
                                         color = if (isJobFullyPaid) Color(0xFF166534) else Color(0xFF991B1B),
@@ -283,7 +288,7 @@ fun CustomerDetailScreen(
                                 Text(if (payment.notes.isNotBlank() && !payment.notes.contains("job_")) payment.notes else "Payment via ${payment.method}", fontWeight = FontWeight.Bold)
                                 Text("${payment.method} • ${payment.date}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text("₹${payment.amount.toInt()}", fontWeight = FontWeight.Bold, color = Color(0xFF16A34A), fontSize = 16.sp)
+                            Text("₹${formatIndianCurrency(payment.amount)}", fontWeight = FontWeight.Bold, color = Color(0xFF16A34A), fontSize = 16.sp)
                         }
                     }
                 }

@@ -1,6 +1,7 @@
 package com.example.ui.payments
 
 import android.app.DatePickerDialog
+import com.example.ui.util.formatIndianCurrency
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -91,12 +92,12 @@ fun ReceivePaymentScreen(
         if (selectedCustomer != null && payAmount.isEmpty()) {
             val firstPending = pendingJobs.firstOrNull()
             selectedJobForPayment = firstPending
-            val defaultAmt = (firstPending?.pendingAmount ?: pendingDue).toInt()
+            val defaultAmt = (firstPending?.pendingAmount ?: 0.0).toInt()
             if (defaultAmt > 0) {
                 payAmount = defaultAmt.toString()
             }
             if (payNotes.isEmpty()) {
-                payNotes = if (firstPending != null) "Payment for ${firstPending.serviceName}" else "General Settlement"
+                payNotes = if (firstPending != null) "Payment for ${firstPending.serviceName}" else "Payment"
             }
         }
     }
@@ -251,16 +252,16 @@ fun ReceivePaymentScreen(
                             ) {
                                 Column {
                                     Text("Total Bill", style = MaterialTheme.typography.labelSmall)
-                                    Text("₹${totalBilling.toInt()}", fontWeight = FontWeight.Bold)
+                                    Text("₹${formatIndianCurrency(totalBilling)}", fontWeight = FontWeight.Bold)
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text("Total Paid", style = MaterialTheme.typography.labelSmall, color = Color(0xFF16A34A))
-                                    Text("₹${effectivePaid.toInt()}", fontWeight = FontWeight.Bold, color = Color(0xFF16A34A))
+                                    Text("₹${formatIndianCurrency(effectivePaid)}", fontWeight = FontWeight.Bold, color = Color(0xFF16A34A))
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text("Pending Due", style = MaterialTheme.typography.labelSmall, color = if (pendingDue > 0) Color(0xFFDC2626) else Color(0xFF16A34A))
                                     Text(
-                                        text = if (pendingDue > 0) "₹${pendingDue.toInt()}" else "✓ All Paid",
+                                        text = if (pendingDue > 0) "₹${formatIndianCurrency(pendingDue)}" else "All Paid",
                                         fontWeight = FontWeight.Bold,
                                         color = if (pendingDue > 0) Color(0xFFDC2626) else Color(0xFF16A34A)
                                     )
@@ -285,12 +286,12 @@ fun ReceivePaymentScreen(
                     var serviceDropdownExpanded by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(
                         expanded = serviceDropdownExpanded,
-                        onExpandedChange = { serviceDropdownExpanded = it }
+                        onExpandedChange = { if (pendingJobs.isNotEmpty()) serviceDropdownExpanded = it }
                     ) {
                         val serviceTitle = if (selectedJobForPayment != null) {
                             "${selectedJobForPayment!!.serviceName} (${selectedJobForPayment!!.date}) - ₹${selectedJobForPayment!!.pendingAmount.toInt()} Due"
                         } else {
-                            "All / General Settlement (₹${pendingDue.toInt()} Due)"
+                            ""
                         }
 
                         OutlinedTextField(
@@ -298,36 +299,30 @@ fun ReceivePaymentScreen(
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Service / Job Linked") },
+                            placeholder = { Text("No pending service / job") },
                             leadingIcon = { Icon(Icons.Default.Work, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = serviceDropdownExpanded) },
+                            trailingIcon = { if (pendingJobs.isNotEmpty()) ExposedDropdownMenuDefaults.TrailingIcon(expanded = serviceDropdownExpanded) },
                             modifier = Modifier.menuAnchor().fillMaxWidth(),
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp)
                         )
 
-                        ExposedDropdownMenu(
-                            expanded = serviceDropdownExpanded,
-                            onDismissRequest = { serviceDropdownExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("All / General Settlement (₹${pendingDue.toInt()})", fontWeight = FontWeight.Bold) },
-                                onClick = {
-                                    selectedJobForPayment = null
-                                    payAmount = pendingDue.toInt().toString()
-                                    payNotes = "General Settlement"
-                                    serviceDropdownExpanded = false
+                        if (pendingJobs.isNotEmpty()) {
+                            ExposedDropdownMenu(
+                                expanded = serviceDropdownExpanded,
+                                onDismissRequest = { serviceDropdownExpanded = false }
+                            ) {
+                                pendingJobs.forEach { job ->
+                                    DropdownMenuItem(
+                                        text = { Text("${job.serviceName} (${job.date}) - ₹${job.pendingAmount.toInt()} Due") },
+                                        onClick = {
+                                            selectedJobForPayment = job
+                                            payAmount = job.pendingAmount.toInt().toString()
+                                            payNotes = "Payment for ${job.serviceName}"
+                                            serviceDropdownExpanded = false
+                                        }
+                                    )
                                 }
-                            )
-                            pendingJobs.forEach { job ->
-                                DropdownMenuItem(
-                                    text = { Text("${job.serviceName} (${job.date}) - ₹${job.pendingAmount.toInt()} Due") },
-                                    onClick = {
-                                        selectedJobForPayment = job
-                                        payAmount = job.pendingAmount.toInt().toString()
-                                        payNotes = "Payment for ${job.serviceName}"
-                                        serviceDropdownExpanded = false
-                                    }
-                                )
                             }
                         }
                     }

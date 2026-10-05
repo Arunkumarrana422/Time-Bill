@@ -1,6 +1,7 @@
 package com.example.ui.expenses
 
 import androidx.activity.compose.BackHandler
+import com.example.ui.util.formatIndianCurrency
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -89,7 +90,7 @@ fun ExpenseListScreen(
                                 Text(expense.description, style = MaterialTheme.typography.bodySmall)
                             }
                         }
-                        Text("-₹${expense.amount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.error)
+                        Text("-₹${formatIndianCurrency(expense.amount)}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.error)
                     }
                 }
             }

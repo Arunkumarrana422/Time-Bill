@@ -1,6 +1,7 @@
 package com.example.ui.timer
 
 import android.app.DatePickerDialog
+import com.example.ui.util.formatIndianCurrency
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -262,7 +263,7 @@ fun ManualJobScreen(
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 Text(service.name, fontWeight = FontWeight.Medium)
-                                                Text("₹${service.hourlyRate.toInt()}/hr", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                                Text("₹${formatIndianCurrency(service.hourlyRate)}/hr", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                             }
                                         },
                                         onClick = {
