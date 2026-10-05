@@ -692,7 +692,7 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "This will permanently delete ALL data from the application and Firestore cloud database:",
+                        text = "This will permanently delete all data",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )
@@ -704,22 +704,53 @@ fun SettingsScreen(
                     ) {
                         Column(
                             modifier = Modifier.padding(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text("❌ All Customers & Balances", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            Text("❌ All Jobs & Work Records", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            Text("❌ All Payments & Invoices", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            Text("❌ All Diesel & Expense Entries", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            Text("❌ Custom Services", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            val items = listOf(
+                                "All Customers & Balances",
+                                "All Jobs & Work Records",
+                                "All Payments & Invoices",
+                                "All Diesel & Expense Entries",
+                                "Custom Services"
+                            )
+                            items.forEach { item ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = item,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
                         }
                     }
 
-                    Text(
-                        text = "✅ Your User Profile & Login Account will remain saved.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color(0xFF2E7D32),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Your User Profile & Login Account will remain saved.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF2E7D32),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
 
                     Text(
                         text = "To confirm permanent deletion, type DELETE below:",

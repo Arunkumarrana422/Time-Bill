@@ -24,6 +24,7 @@ import com.example.data.model.UserProfile
 import com.example.ui.auth.AuthScreen
 import com.example.ui.navigation.TimeBillNavGraph
 import com.example.ui.util.clearFocusOnTap
+import com.example.ui.util.isInitialNetworkConnected
 import com.example.ui.util.observeNetworkConnectivity
 import com.example.ui.theme.TimeBillTheme
 import com.google.firebase.Firebase
@@ -60,7 +61,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             TimeBillTheme {
                 val context = LocalContext.current
-                val isConnectedState = observeNetworkConnectivity(context).collectAsState(initial = true)
+                val isConnectedState = observeNetworkConnectivity(context).collectAsState(initial = remember { isInitialNetworkConnected(context) })
                 val isConnected = isConnectedState.value
 
                 var currentUser by remember {
