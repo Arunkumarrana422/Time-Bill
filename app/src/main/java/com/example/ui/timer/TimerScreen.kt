@@ -127,6 +127,7 @@ fun TimerScreen(
             )
         }
     ) { padding ->
+        val isDark = androidx.compose.foundation.isSystemInDarkTheme()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -141,7 +142,11 @@ fun TimerScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
+                    ),
+                    border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+                    elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 3.dp, pressedElevation = 6.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text("Select Customer & Service", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -346,6 +351,7 @@ fun TimerScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)) else null,
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 6.dp)
                 ) {
                     Column(

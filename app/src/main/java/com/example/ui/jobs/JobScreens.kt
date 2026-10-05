@@ -126,53 +126,55 @@ fun JobListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp)
         ) {
-            Spacer(modifier = Modifier.height(12.dp))
-            // Search Input
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Search jobs, customer...", maxLines = 1) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear")
-                        }
+            Box(modifier = Modifier.padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 8.dp)) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Search Input
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search jobs, customer...", maxLines = 1) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear")
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        maxLines = 1,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Consistent Filter Tabs
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = filterStatus == "All",
+                            onClick = { filterStatus = "All" },
+                            label = { Text("All (${allJobs.size})", fontWeight = if (filterStatus == "All") FontWeight.Bold else FontWeight.Normal) }
+                        )
+                        FilterChip(
+                            selected = filterStatus == "Pending",
+                            onClick = { filterStatus = "Pending" },
+                            label = { Text("Pending Dues (${pendingJobs.size})", fontWeight = if (filterStatus == "Pending") FontWeight.Bold else FontWeight.Normal) }
+                        )
+                        FilterChip(
+                            selected = filterStatus == "Paid",
+                            onClick = { filterStatus = "Paid" },
+                            label = { Text("Paid (${paidJobs.size})", fontWeight = if (filterStatus == "Paid") FontWeight.Bold else FontWeight.Normal) }
+                        )
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                maxLines = 1,
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Consistent Filter Tabs
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChip(
-                    selected = filterStatus == "All",
-                    onClick = { filterStatus = "All" },
-                    label = { Text("All (${allJobs.size})", fontWeight = if (filterStatus == "All") FontWeight.Bold else FontWeight.Normal) }
-                )
-                FilterChip(
-                    selected = filterStatus == "Pending",
-                    onClick = { filterStatus = "Pending" },
-                    label = { Text("Pending Dues (${pendingJobs.size})", fontWeight = if (filterStatus == "Pending") FontWeight.Bold else FontWeight.Normal) }
-                )
-                FilterChip(
-                    selected = filterStatus == "Paid",
-                    onClick = { filterStatus = "Paid" },
-                    label = { Text("Paid (${paidJobs.size})", fontWeight = if (filterStatus == "Paid") FontWeight.Bold else FontWeight.Normal) }
-                )
+                }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             if (filteredJobs.isEmpty()) {
                 Box(

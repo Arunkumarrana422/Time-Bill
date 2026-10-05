@@ -249,7 +249,7 @@ fun AnalyticsStatCard(
         colors = CardDefaults.cardColors(
             containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f) else cardColor
         ),
-        border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+        border = androidx.compose.foundation.BorderStroke(1.dp, textColor.copy(alpha = if (isDark) 0.45f else 0.35f)),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 4.dp, pressedElevation = 7.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

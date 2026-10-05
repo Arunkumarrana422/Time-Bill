@@ -218,11 +218,13 @@ fun CalendarScreen(
             }
 
             // Summary Card
+            val isDark = androidx.compose.foundation.isSystemInDarkTheme()
             val summaryCardShape = RoundedCornerShape(14.dp)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = summaryCardShape,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -262,8 +264,11 @@ fun CalendarScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = jobCardShape,
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp, pressedElevation = 7.dp)
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
+                            ),
+                            border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+                            elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 4.dp, pressedElevation = 7.dp)
                         ) {
                             Row(
                                 modifier = Modifier

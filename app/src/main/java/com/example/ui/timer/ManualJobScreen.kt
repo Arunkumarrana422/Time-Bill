@@ -124,10 +124,15 @@ fun ManualJobScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            val isDark = androidx.compose.foundation.isSystemInDarkTheme()
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
+                ),
+                border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+                elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 3.dp, pressedElevation = 6.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     // Searchable Customer Dropdown + Quick Add

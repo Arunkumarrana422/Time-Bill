@@ -77,6 +77,7 @@ fun ServiceListScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(servicesState.value) { service ->
+                val isDark = androidx.compose.foundation.isSystemInDarkTheme()
                 val cardShape = RoundedCornerShape(14.dp)
                 Card(
                     onClick = {
@@ -89,8 +90,11 @@ fun ServiceListScreen(
                         .fillMaxWidth()
                         .clip(cardShape),
                     shape = cardShape,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
+                    ),
+                    border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
+                    elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 2.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp).fillMaxWidth(),
