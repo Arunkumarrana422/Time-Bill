@@ -635,8 +635,10 @@ fun TimerScreen(
                                         baseAmount = existingJob.baseAmount + finalAmt,
                                         finalAmount = existingJob.finalAmount + finalAmt,
                                         pendingAmount = existingJob.pendingAmount + finalAmt,
+                                        paymentStatus = "Pending",
                                         endTime = timeFormat.format(Date()),
-                                        notes = if (noteText.isBlank()) existingJob.notes else if (existingJob.notes.isBlank()) noteText else "${existingJob.notes}, $noteText"
+                                        notes = if (noteText.isBlank()) existingJob.notes else if (existingJob.notes.isBlank()) noteText else "${existingJob.notes}, $noteText",
+                                        createdAt = System.currentTimeMillis()
                                     )
                                 } else {
                                     Job(
@@ -658,7 +660,8 @@ fun TimerScreen(
                                         pendingAmount = finalAmt,
                                         paymentStatus = "Pending",
                                         status = "Completed",
-                                        notes = noteText
+                                        notes = noteText,
+                                        createdAt = System.currentTimeMillis()
                                     )
                                 }
                                 repository.saveJob(job)

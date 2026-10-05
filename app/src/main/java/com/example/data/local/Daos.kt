@@ -54,13 +54,13 @@ interface ServiceDao {
 
 @Dao
 interface JobDao {
-    @Query("SELECT * FROM jobs WHERE userId = :userId ORDER BY createdAt DESC")
+    @Query("SELECT * FROM jobs WHERE userId = :userId ORDER BY createdAt DESC, jobId DESC")
     fun observeJobs(userId: String): Flow<List<Job>>
 
     @Query("SELECT * FROM jobs WHERE jobId = :jobId")
     suspend fun getJobById(jobId: String): Job?
 
-    @Query("SELECT * FROM jobs WHERE userId = :userId AND customerId = :customerId ORDER BY createdAt DESC")
+    @Query("SELECT * FROM jobs WHERE userId = :userId AND customerId = :customerId ORDER BY createdAt DESC, jobId DESC")
     fun observeJobsForCustomer(userId: String, customerId: String): Flow<List<Job>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

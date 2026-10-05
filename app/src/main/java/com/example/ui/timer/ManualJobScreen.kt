@@ -404,7 +404,9 @@ fun ManualJobScreen(
                                         discountAmount = 0.0,
                                         finalAmount = existingJob.finalAmount + finalAmt,
                                         pendingAmount = existingJob.pendingAmount + finalAmt,
-                                        notes = if (notes.isBlank()) existingJob.notes else if (existingJob.notes.isBlank()) notes else "${existingJob.notes}, $notes"
+                                        paymentStatus = "Pending",
+                                        notes = if (notes.isBlank()) existingJob.notes else if (existingJob.notes.isBlank()) notes else "${existingJob.notes}, $notes",
+                                        createdAt = System.currentTimeMillis()
                                     )
                                 } else {
                                     Job(
@@ -428,7 +430,8 @@ fun ManualJobScreen(
                                         pendingAmount = finalAmt,
                                         paymentStatus = "Pending",
                                         status = "Completed",
-                                        notes = notes
+                                        notes = notes,
+                                        createdAt = System.currentTimeMillis()
                                     )
                                 }
                                 repository.saveJob(job)

@@ -88,6 +88,13 @@ fun DashboardScreen(
         }
     }
 
+    val recentJobs = remember(jobsState.value) {
+        jobsState.value.sortedWith(
+            compareByDescending<Job> { it.createdAt }
+                .thenByDescending { it.jobId }
+        ).take(5)
+    }
+
     var isLoading by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         delay(600)
@@ -342,7 +349,7 @@ fun DashboardScreen(
                         }
                     }
                 } else {
-                    items(jobsState.value.take(5)) { job ->
+                    items(recentJobs, key = { it.jobId }) { job ->
                         val isDark = androidx.compose.foundation.isSystemInDarkTheme()
                         val jobCardShape = RoundedCornerShape(14.dp)
                         Card(

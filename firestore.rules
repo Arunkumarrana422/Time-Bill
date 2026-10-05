@@ -2,17 +2,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Check if the user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
     
+    // Check if the authenticated user is the owner of the user profile/data
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Strict user data isolation:
+    // A user can ONLY read, create, update, and delete their own profile and records.
+    // No other user can access or view another user's data.
     match /users/{userId} {
       allow read, write: if isOwner(userId);
       
+      // All user subcollections (customers, jobs, payments, expenses, services)
       match /customers/{customerId} {
         allow read, write: if isOwner(userId);
       }
@@ -32,6 +38,12 @@ service cloud.firestore {
       match /expenses/{expenseId} {
         allow read, write: if isOwner(userId);
       }
+      
+      // Any additional nested data under this user is strictly protected
+      match /{allSubcollections=**} {
+        allow read, write: if isOwner(userId);
+      }
     }
   }
 }
+

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -50,6 +51,15 @@ fun JobListScreen(
     var filterStatus by remember { mutableStateOf("All") }
     var searchQuery by remember { mutableStateOf("") }
 
+    val listState = rememberLazyListState()
+    var previousJobCount by remember { mutableIntStateOf(jobsState.value.size) }
+    LaunchedEffect(jobsState.value.size) {
+        if (jobsState.value.size > previousJobCount) {
+            listState.animateScrollToItem(0)
+        }
+        previousJobCount = jobsState.value.size
+    }
+
     val allJobs = jobsState.value
     val pendingJobs = remember(allJobs) { allJobs.filter { it.pendingAmount > 0 } }
     val paidJobs = remember(allJobs) { allJobs.filter { it.pendingAmount <= 0 } }
@@ -60,14 +70,20 @@ fun JobListScreen(
         else -> allJobs
     }
 
-    val filteredJobs = if (searchQuery.isBlank()) {
-        baseJobs
-    } else {
-        baseJobs.filter {
-            it.customerName.contains(searchQuery, ignoreCase = true) ||
-            it.serviceName.contains(searchQuery, ignoreCase = true) ||
-            it.date.contains(searchQuery, ignoreCase = true)
+    val filteredJobs = remember(baseJobs, searchQuery) {
+        val filtered = if (searchQuery.isBlank()) {
+            baseJobs
+        } else {
+            baseJobs.filter {
+                it.customerName.contains(searchQuery, ignoreCase = true) ||
+                it.serviceName.contains(searchQuery, ignoreCase = true) ||
+                it.date.contains(searchQuery, ignoreCase = true)
+            }
         }
+        filtered.sortedWith(
+            compareByDescending<Job> { it.createdAt }
+                .thenByDescending { it.jobId }
+        )
     }
 
     Scaffold(
@@ -193,10 +209,11 @@ fun JobListScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(filteredJobs) { job ->
+                    items(filteredJobs, key = { it.jobId }) { job ->
                         JobCard(job = job, onClick = { onNavigate(Screen.JobDetail.createRoute(job.jobId)) })
                     }
                 }
