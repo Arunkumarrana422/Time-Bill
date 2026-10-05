@@ -87,9 +87,6 @@ class MainActivity : ComponentActivity() {
                             delay(4000)
                         }
                     } else {
-                        try {
-                            Toast.makeText(context, "Internet connected", Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {}
                         currentUser?.uid?.let { uid ->
                             scope.launch {
                                 try {
