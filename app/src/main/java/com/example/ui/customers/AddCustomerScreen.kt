@@ -96,6 +96,7 @@ fun AddCustomerScreen(
                 ) {
                     Text("Customer Information", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
+                    val isNameError = errorMessage != null && name.isBlank()
                     OutlinedTextField(
                         value = name,
                         onValueChange = {
@@ -105,6 +106,12 @@ fun AddCustomerScreen(
                         label = { Text("Customer Name *") },
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         singleLine = true,
+                        isError = isNameError,
+                        supportingText = {
+                            if (isNameError) {
+                                Text("Customer name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            }
+                        },
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -123,8 +130,9 @@ fun AddCustomerScreen(
                         singleLine = true,
                         isError = isMobileError,
                         supportingText = {
-                            if (mobile.isNotEmpty() && mobile.length < 10) {
-                                Text("Mobile number must be 10 digits (${mobile.length}/10)", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            if (isMobileError) {
+                                val errText = if (mobile.isBlank()) "Mobile number is required *" else "Mobile number must be 10 digits (${mobile.length}/10)"
+                                Text(errText, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                             }
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

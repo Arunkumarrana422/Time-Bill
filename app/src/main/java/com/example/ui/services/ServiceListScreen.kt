@@ -40,12 +40,16 @@ fun ServiceListScreen(
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var hourlyRate by remember { mutableStateOf("500") }
+    var addServiceError by remember { mutableStateOf<String?>(null) }
+    var isAddingService by remember { mutableStateOf(false) }
 
     // Edit service state
     var editingService by remember { mutableStateOf<ServiceItem?>(null) }
     var editName by remember { mutableStateOf("") }
     var editDescription by remember { mutableStateOf("") }
     var editHourlyRate by remember { mutableStateOf("") }
+    var editServiceError by remember { mutableStateOf<String?>(null) }
+    var isUpdatingService by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -150,16 +154,32 @@ fun ServiceListScreen(
         }
 
         if (showAddDialog) {
+            val isNameError = addServiceError != null && name.isBlank()
+            val rateVal = hourlyRate.toDoubleOrNull() ?: 0.0
+            val isRateError = addServiceError != null && rateVal <= 0.0
+
             AlertDialog(
-                onDismissRequest = { showAddDialog = false },
+                onDismissRequest = { 
+                    showAddDialog = false 
+                    addServiceError = null
+                },
                 title = { Text("Add Service", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = name,
-                            onValueChange = { name = it },
+                            onValueChange = { 
+                                name = it
+                                addServiceError = null
+                            },
                             label = { Text("Service Name *") },
                             singleLine = true,
+                            isError = isNameError,
+                            supportingText = {
+                                if (isNameError) {
+                                    Text("Service name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            },
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -173,9 +193,18 @@ fun ServiceListScreen(
                         )
                         OutlinedTextField(
                             value = hourlyRate,
-                            onValueChange = { hourlyRate = it },
+                            onValueChange = { 
+                                hourlyRate = it
+                                addServiceError = null
+                            },
                             label = { Text("Hourly Rate (₹) *") },
                             singleLine = true,
+                            isError = isRateError,
+                            supportingText = {
+                                if (isRateError) {
+                                    Text("Valid rate greater than ₹0 is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            },
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -184,10 +213,18 @@ fun ServiceListScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            if (name.isBlank()) return@Button
+                            val hr = hourlyRate.toDoubleOrNull() ?: 0.0
+                            if (name.isBlank()) {
+                                addServiceError = "Service name is required *"
+                                return@Button
+                            }
+                            if (hr <= 0.0) {
+                                addServiceError = "Valid rate is required *"
+                                return@Button
+                            }
+                            isAddingService = true
                             scope.launch {
                                 val srvId = "srv_${System.currentTimeMillis()}"
-                                val hr = hourlyRate.toDoubleOrNull() ?: 500.0
                                 val service = ServiceItem(
                                     serviceId = srvId,
                                     userId = currentUserId,
@@ -200,15 +237,25 @@ fun ServiceListScreen(
                                 repository.saveService(service)
                                 name = ""
                                 description = ""
+                                addServiceError = null
+                                isAddingService = false
                                 showAddDialog = false
                             }
-                        }
+                        },
+                        enabled = !isAddingService
                     ) {
+                        if (isAddingService) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                         Text("Add")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showAddDialog = false }) {
+                    TextButton(onClick = { 
+                        showAddDialog = false 
+                        addServiceError = null
+                    }) {
                         Text("Cancel")
                     }
                 }
@@ -216,16 +263,32 @@ fun ServiceListScreen(
         }
 
         if (editingService != null) {
+            val isEditNameError = editServiceError != null && editName.isBlank()
+            val editRateVal = editHourlyRate.toDoubleOrNull() ?: 0.0
+            val isEditRateError = editServiceError != null && editRateVal <= 0.0
+
             AlertDialog(
-                onDismissRequest = { editingService = null },
+                onDismissRequest = { 
+                    editingService = null 
+                    editServiceError = null
+                },
                 title = { Text("Edit Service", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = editName,
-                            onValueChange = { editName = it },
+                            onValueChange = { 
+                                editName = it
+                                editServiceError = null
+                            },
                             label = { Text("Service Name *") },
                             singleLine = true,
+                            isError = isEditNameError,
+                            supportingText = {
+                                if (isEditNameError) {
+                                    Text("Service name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            },
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -239,9 +302,18 @@ fun ServiceListScreen(
                         )
                         OutlinedTextField(
                             value = editHourlyRate,
-                            onValueChange = { editHourlyRate = it },
+                            onValueChange = { 
+                                editHourlyRate = it
+                                editServiceError = null
+                            },
                             label = { Text("Hourly Rate (₹) *") },
                             singleLine = true,
+                            isError = isEditRateError,
+                            supportingText = {
+                                if (isEditRateError) {
+                                    Text("Valid rate greater than ₹0 is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            },
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -250,9 +322,17 @@ fun ServiceListScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            if (editName.isBlank()) return@Button
+                            val hr = editHourlyRate.toDoubleOrNull() ?: 0.0
+                            if (editName.isBlank()) {
+                                editServiceError = "Service name is required *"
+                                return@Button
+                            }
+                            if (hr <= 0.0) {
+                                editServiceError = "Valid rate is required *"
+                                return@Button
+                            }
+                            isUpdatingService = true
                             scope.launch {
-                                val hr = editHourlyRate.toDoubleOrNull() ?: 500.0
                                 val updated = editingService!!.copy(
                                     name = editName.trim(),
                                     description = editDescription.trim(),
@@ -260,15 +340,25 @@ fun ServiceListScreen(
                                     minuteRate = hr / 60.0
                                 )
                                 repository.saveService(updated)
+                                isUpdatingService = false
+                                editServiceError = null
                                 editingService = null
                             }
-                        }
+                        },
+                        enabled = !isUpdatingService
                     ) {
+                        if (isUpdatingService) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                         Text("Save")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { editingService = null }) {
+                    TextButton(onClick = { 
+                        editingService = null 
+                        editServiceError = null
+                    }) {
                         Text("Cancel")
                     }
                 }

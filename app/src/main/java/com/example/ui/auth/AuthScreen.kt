@@ -338,10 +338,20 @@ fun AuthScreen(
                         }
 
                         if (isRegisterMode) {
+                            val isFullNameError = errorMessage != null && fullName.isBlank()
                             OutlinedTextField(
                                 value = fullName,
-                                onValueChange = { fullName = it },
+                                onValueChange = { 
+                                    fullName = it
+                                    if (errorMessage != null) errorMessage = null
+                                },
                                 label = { Text("Full Name *") },
+                                isError = isFullNameError,
+                                supportingText = {
+                                    if (isFullNameError) {
+                                        Text("Full name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                    }
+                                },
                                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
@@ -383,10 +393,21 @@ fun AuthScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                         }
 
+                        val isEmailError = (errorMessage != null && email.isBlank()) || (email.isNotEmpty() && !email.contains("@"))
                         OutlinedTextField(
                             value = email,
-                            onValueChange = { email = it },
+                            onValueChange = { 
+                                email = it
+                                if (errorMessage != null) errorMessage = null
+                            },
                             label = { Text("Email Address *") },
+                            isError = isEmailError,
+                            supportingText = {
+                                if (isEmailError) {
+                                    val text = if (email.isBlank()) "Email address is required *" else "Please enter a valid email address"
+                                    Text(text, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            },
                             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
@@ -395,10 +416,21 @@ fun AuthScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         if (!isForgotPassword) {
+                            val isPasswordError = errorMessage != null && (password.isBlank() || (isRegisterMode && password.length < 6))
                             OutlinedTextField(
                                 value = password,
-                                onValueChange = { password = it },
+                                onValueChange = { 
+                                    password = it
+                                    if (errorMessage != null) errorMessage = null
+                                },
                                 label = { Text("Password *") },
+                                isError = isPasswordError,
+                                supportingText = {
+                                    if (isPasswordError) {
+                                        val text = if (password.isBlank()) "Password is required *" else "Password must be at least 6 characters"
+                                        Text(text, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                    }
+                                },
                                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                                 trailingIcon = {
                                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -441,10 +473,21 @@ fun AuthScreen(
                         }
 
                         if (isRegisterMode) {
+                            val isConfirmPasswordError = errorMessage != null && (confirmPassword.isBlank() || confirmPassword != password)
                             OutlinedTextField(
                                 value = confirmPassword,
-                                onValueChange = { confirmPassword = it },
+                                onValueChange = { 
+                                    confirmPassword = it
+                                    if (errorMessage != null) errorMessage = null
+                                },
                                 label = { Text("Confirm Password *") },
+                                isError = isConfirmPasswordError,
+                                supportingText = {
+                                    if (isConfirmPasswordError) {
+                                        val text = if (confirmPassword.isBlank()) "Please confirm your password *" else "Passwords do not match *"
+                                        Text(text, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                    }
+                                },
                                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                                 trailingIcon = {
                                     IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
@@ -462,6 +505,8 @@ fun AuthScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                         } else if (!isForgotPassword) {
                             Spacer(modifier = Modifier.height(6.dp))
+                        } else {
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
 
                         // Main Action Button

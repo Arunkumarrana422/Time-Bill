@@ -55,6 +55,9 @@ fun SetupScreen(
     var invoicePrefix by remember { mutableStateOf(initialProfile?.invoicePrefix ?: "INV") }
     var paymentTerms by remember { mutableStateOf(initialProfile?.paymentTerms ?: "Due on receipt") }
 
+    var isSaving by remember { mutableStateOf(false) }
+    var setupErrorMessage by remember { mutableStateOf<String?>(null) }
+
     Surface(
         modifier = Modifier
             .fillMaxSize()
@@ -109,39 +112,61 @@ fun SetupScreen(
                 Column(
                     modifier = Modifier.padding(20.dp)
                 ) {
+                    val isNameError = setupErrorMessage != null && name.isBlank()
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { name = it },
+                        onValueChange = { 
+                            name = it
+                            if (setupErrorMessage != null) setupErrorMessage = null
+                        },
                         label = { Text("Owner / User Name *") },
+                        isError = isNameError,
+                        supportingText = {
+                            if (isNameError) {
+                                Text("Owner name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    val isBusinessError = setupErrorMessage != null && businessName.isBlank()
                     OutlinedTextField(
                         value = businessName,
-                        onValueChange = { businessName = it },
+                        onValueChange = { 
+                            businessName = it
+                            if (setupErrorMessage != null) setupErrorMessage = null
+                        },
                         label = { Text("Business Name *") },
+                        isError = isBusinessError,
+                        supportingText = {
+                            if (isBusinessError) {
+                                Text("Business name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val isMobileError = mobile.isNotEmpty() && mobile.length < 10
+                    val isMobileError = (setupErrorMessage != null && (mobile.isBlank() || mobile.length != 10)) || (mobile.isNotEmpty() && mobile.length < 10)
                     OutlinedTextField(
                         value = mobile,
                         onValueChange = { input ->
                             val digits = input.filter { it.isDigit() }.take(10)
                             mobile = digits
+                            if (setupErrorMessage != null) setupErrorMessage = null
                         },
                         label = { Text("Mobile Number *") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         isError = isMobileError,
                         supportingText = {
                             if (isMobileError) {
-                                Text("Mobile number must be 10 digits (${mobile.length}/10)", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                val err = if (mobile.isBlank()) "Mobile number is required *" else "Mobile number must be 10 digits (${mobile.length}/10)"
+                                Text(err, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -217,42 +242,71 @@ fun SetupScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    var setupErrorMessage by remember { mutableStateOf<String?>(null) }
                     if (setupErrorMessage != null) {
-                        Text(
-                            text = setupErrorMessage!!,
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = setupErrorMessage!!,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
 
                     Button(
                         onClick = {
+                            val trimmedName = name.trim()
+                            val trimmedBusiness = businessName.trim()
                             val trimmedMobile = mobile.trim()
-                            if (trimmedMobile.isNotEmpty() && trimmedMobile.length < 10) {
-                                setupErrorMessage = "Mobile number must be 10 digits (${trimmedMobile.length}/10)"
+
+                            if (trimmedName.isBlank()) {
+                                setupErrorMessage = "Please enter owner / user name *"
                                 return@Button
                             }
+                            if (trimmedBusiness.isBlank()) {
+                                setupErrorMessage = "Please enter business name *"
+                                return@Button
+                            }
+                            if (trimmedMobile.isBlank() || trimmedMobile.length != 10) {
+                                setupErrorMessage = "Mobile number must be a valid 10-digit number *"
+                                return@Button
+                            }
+
+                            isSaving = true
                             val profile = UserProfile(
                                 userId = currentUserId,
-                                name = name.ifBlank { "Owner" },
-                                businessName = businessName.ifBlank { "My Business" },
-                                mobile = mobile,
-                                address = address,
+                                name = trimmedName,
+                                businessName = trimmedBusiness,
+                                mobile = trimmedMobile,
+                                address = address.trim(),
                                 currency = currency.ifBlank { "₹" },
                                 defaultRate = defaultRate.toDoubleOrNull() ?: 500.0,
-                                defaultService = defaultService,
-                                invoicePrefix = invoicePrefix,
-                                paymentTerms = paymentTerms,
+                                defaultService = defaultService.trim().ifBlank { "Tractor Ploughing" },
+                                invoicePrefix = invoicePrefix.trim().ifBlank { "INV" },
+                                paymentTerms = paymentTerms.trim().ifBlank { "Due on receipt" },
                                 isSetupComplete = true
                             )
                             onSaveComplete(profile)
                         },
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        enabled = !isSaving,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Save & Get Started", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.5.dp
+                            )
+                        } else {
+                            Text("Save & Get Started", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }

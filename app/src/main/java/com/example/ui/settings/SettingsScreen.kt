@@ -92,6 +92,8 @@ fun SettingsScreen(
     var editAddress by remember { mutableStateOf("") }
     var editDefaultService by remember { mutableStateOf("") }
     var editDefaultRate by remember { mutableStateOf("") }
+    var editProfileError by remember { mutableStateOf<String?>(null) }
+    var isSavingProfile by remember { mutableStateOf(false) }
 
     // Instant sync on opening Account / Settings to guarantee registration data & photo appear immediately
     LaunchedEffect(currentUserId) {
@@ -534,8 +536,15 @@ fun SettingsScreen(
 
     // Edit Profile Dialog
     if (showEditProfileDialog) {
+        val isNameError = editProfileError != null && editName.isBlank()
+        val isBusinessError = editProfileError != null && editBusinessName.isBlank()
+        val isMobileError = (editProfileError != null && (editMobile.isBlank() || editMobile.length != 10)) || (editMobile.isNotEmpty() && editMobile.length < 10)
+
         AlertDialog(
-            onDismissRequest = { showEditProfileDialog = false },
+            onDismissRequest = { 
+                showEditProfileDialog = false 
+                editProfileError = null
+            },
             title = { Text("Edit Profile & Business Details", fontWeight = FontWeight.Bold) },
             text = {
                 Column(
@@ -544,31 +553,52 @@ fun SettingsScreen(
                 ) {
                     OutlinedTextField(
                         value = editName,
-                        onValueChange = { editName = it },
+                        onValueChange = { 
+                            editName = it
+                            editProfileError = null
+                        },
                         label = { Text("Owner / Full Name *") },
                         singleLine = true,
+                        isError = isNameError,
+                        supportingText = {
+                            if (isNameError) {
+                                Text("Owner name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            }
+                        },
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = editBusinessName,
-                        onValueChange = { editBusinessName = it },
+                        onValueChange = { 
+                            editBusinessName = it
+                            editProfileError = null
+                        },
                         label = { Text("Business Name *") },
                         singleLine = true,
+                        isError = isBusinessError,
+                        supportingText = {
+                            if (isBusinessError) {
+                                Text("Business name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            }
+                        },
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    val isMobileError = editMobile.isNotEmpty() && editMobile.length < 10
                     OutlinedTextField(
                         value = editMobile,
-                        onValueChange = { editMobile = it.filter { ch -> ch.isDigit() }.take(10) },
+                        onValueChange = { 
+                            editMobile = it.filter { ch -> ch.isDigit() }.take(10)
+                            editProfileError = null
+                        },
                         label = { Text("Mobile Number *") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = isMobileError,
                         supportingText = {
                             if (isMobileError) {
-                                Text("Mobile number must be 10 digits (${editMobile.length}/10)", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                val err = if (editMobile.isBlank()) "Mobile number is required *" else "Mobile number must be 10 digits (${editMobile.length}/10)"
+                                Text(err, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                             }
                         },
                         shape = RoundedCornerShape(10.dp),
@@ -577,7 +607,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = editAddress,
                         onValueChange = { editAddress = it },
-                        label = { Text("Village / Location / Address *") },
+                        label = { Text("Village / Location / Address (Optional)") },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -603,14 +633,25 @@ fun SettingsScreen(
             confirmButton = {
                 Button(
                     onClick = {
+                        val finalName = editName.trim().ifBlank { inferredName }
+                        val finalBusiness = editBusinessName.trim().ifBlank { inferredBusiness }
+                        val finalMobile = editMobile.trim()
+
+                        if (finalName.isBlank()) {
+                            editProfileError = "Owner name is required *"
+                            return@Button
+                        }
+                        if (finalBusiness.isBlank()) {
+                            editProfileError = "Business name is required *"
+                            return@Button
+                        }
+                        if (finalMobile.isBlank() || finalMobile.length != 10) {
+                            editProfileError = "Valid 10-digit mobile number is required *"
+                            return@Button
+                        }
+
+                        isSavingProfile = true
                         scope.launch {
-                            val finalName = editName.trim().ifBlank { inferredName }
-                            val finalBusiness = editBusinessName.trim().ifBlank { inferredBusiness }
-                            val finalMobile = editMobile.trim()
-                            if (finalMobile.isNotEmpty() && finalMobile.length < 10) {
-                                Toast.makeText(context, "Mobile number must be 10 digits", Toast.LENGTH_SHORT).show()
-                                return@launch
-                            }
                             val finalAddress = editAddress.trim()
                             val finalService = editDefaultService.trim().ifBlank { "Tractor Ploughing" }
                             val finalRate = editDefaultRate.toDoubleOrNull() ?: 1000.0
@@ -642,15 +683,24 @@ fun SettingsScreen(
                             }
                             repository.saveUserProfile(updated)
                             Toast.makeText(context, "Profile updated successfully!", Toast.LENGTH_SHORT).show()
+                            isSavingProfile = false
                             showEditProfileDialog = false
                         }
-                    }
+                    },
+                    enabled = !isSavingProfile
                 ) {
+                    if (isSavingProfile) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
                     Text("Save Changes")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showEditProfileDialog = false }) {
+                TextButton(onClick = { 
+                    showEditProfileDialog = false 
+                    editProfileError = null
+                }) {
                     Text("Cancel")
                 }
             }

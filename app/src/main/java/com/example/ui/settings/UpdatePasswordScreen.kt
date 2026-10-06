@@ -102,11 +102,18 @@ fun UpdatePasswordScreen(
                     Text("Security Information", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
                     // Old Password
+                    val isOldPasswordError = passwordError != null && oldPassword.isBlank()
                     OutlinedTextField(
                         value = oldPassword,
                         onValueChange = { oldPassword = it; passwordError = null },
-                        label = { Text("Old Password") },
+                        label = { Text("Old Password *") },
                         singleLine = true,
+                        isError = isOldPasswordError,
+                        supportingText = {
+                            if (isOldPasswordError) {
+                                Text("Old password is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            }
+                        },
                         visualTransformation = if (oldPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { oldPasswordVisible = !oldPasswordVisible }) {
@@ -121,11 +128,19 @@ fun UpdatePasswordScreen(
                     )
 
                     // New Password
+                    val isNewPasswordError = passwordError != null && (newPassword.isBlank() || newPassword.length < 6)
                     OutlinedTextField(
                         value = newPassword,
                         onValueChange = { newPassword = it; passwordError = null },
-                        label = { Text("New Password") },
+                        label = { Text("New Password *") },
                         singleLine = true,
+                        isError = isNewPasswordError,
+                        supportingText = {
+                            if (isNewPasswordError) {
+                                val err = if (newPassword.isBlank()) "New password is required *" else "Password must be at least 6 characters"
+                                Text(err, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            }
+                        },
                         visualTransformation = if (newPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { newPasswordVisible = !newPasswordVisible }) {
@@ -140,11 +155,19 @@ fun UpdatePasswordScreen(
                     )
 
                     // Re-enter New Password
+                    val isReEnterError = passwordError != null && (reEnterPassword.isBlank() || reEnterPassword != newPassword)
                     OutlinedTextField(
                         value = reEnterPassword,
                         onValueChange = { reEnterPassword = it; passwordError = null },
-                        label = { Text("Re-enter New Password") },
+                        label = { Text("Re-enter New Password *") },
                         singleLine = true,
+                        isError = isReEnterError,
+                        supportingText = {
+                            if (isReEnterError) {
+                                val err = if (reEnterPassword.isBlank()) "Please re-enter new password *" else "Passwords do not match *"
+                                Text(err, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            }
+                        },
                         visualTransformation = if (reEnterPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { reEnterPasswordVisible = !reEnterPasswordVisible }) {

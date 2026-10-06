@@ -74,6 +74,12 @@ fun ManualJobScreen(
     var showAddServiceDialog by remember { mutableStateOf(false) }
     var newServiceName by remember { mutableStateOf("") }
     var newServiceRate by remember { mutableStateOf("500") }
+    var serviceNameError by remember { mutableStateOf<String?>(null) }
+    var isSavingNewCustomer by remember { mutableStateOf(false) }
+    var isSavingNewService by remember { mutableStateOf(false) }
+
+    var jobFormError by remember { mutableStateOf<String?>(null) }
+    var isSavingJob by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -152,6 +158,7 @@ fun ManualJobScreen(
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     // Searchable Customer Dropdown + Quick Add
                     var customerExpanded by remember { mutableStateOf(false) }
+                    val isCustomerError = jobFormError != null && selectedCustomer == null
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         ExposedDropdownMenuBox(
                             expanded = customerExpanded,
@@ -164,11 +171,18 @@ fun ManualJobScreen(
                                     customerSearchQuery = query
                                     selectedCustomer = customersState.value.find { it.name.equals(query.trim(), ignoreCase = true) }
                                     customerExpanded = true
+                                    jobFormError = null
                                 },
                                 readOnly = false,
                                 singleLine = true,
                                 label = { Text("Customer *", maxLines = 1) },
                                 placeholder = { Text("Search customer...", maxLines = 1) },
+                                isError = isCustomerError,
+                                supportingText = {
+                                    if (isCustomerError) {
+                                        Text("Please select or add a customer *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                    }
+                                },
                                 trailingIcon = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         if (customerSearchQuery.isNotEmpty() || selectedCustomer != null) {
@@ -253,6 +267,7 @@ fun ManualJobScreen(
 
                     // Service Dropdown + Quick Add
                     var serviceExpanded by remember { mutableStateOf(false) }
+                    val isServiceError = jobFormError != null && selectedService == null
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         ExposedDropdownMenuBox(
                             expanded = serviceExpanded,
@@ -266,6 +281,12 @@ fun ManualJobScreen(
                                 singleLine = true,
                                 label = { Text("Service *", maxLines = 1) },
                                 placeholder = { Text("Select Service", maxLines = 1) },
+                                isError = isServiceError,
+                                supportingText = {
+                                    if (isServiceError) {
+                                        Text("Please select or add a service *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                    }
+                                },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = serviceExpanded) },
                                 modifier = Modifier.fillMaxWidth().menuAnchor(),
                                 shape = RoundedCornerShape(12.dp)
@@ -290,6 +311,7 @@ fun ManualJobScreen(
                                             selectedService = service
                                             rate = service.hourlyRate.toInt().toString()
                                             serviceExpanded = false
+                                            jobFormError = null
                                         }
                                     )
                                 }
@@ -334,23 +356,35 @@ fun ManualJobScreen(
                         )
                     }
 
+                    val isDurationError = jobFormError != null && totalMin <= 0
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(
                             value = hours,
-                            onValueChange = { hours = it },
-                            label = { Text("Hours") },
+                            onValueChange = { 
+                                hours = it
+                                jobFormError = null 
+                            },
+                            label = { Text("Hours *") },
+                            isError = isDurationError,
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp)
                         )
                         OutlinedTextField(
                             value = minutes,
-                            onValueChange = { minutes = it },
+                            onValueChange = { 
+                                minutes = it
+                                jobFormError = null 
+                            },
                             label = { Text("Minutes") },
+                            isError = isDurationError,
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp)
                         )
+                    }
+                    if (isDurationError) {
+                        Text("Please enter working duration (Hours or Minutes) *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                     }
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -397,11 +431,40 @@ fun ManualJobScreen(
                         Text("₹${finalAmt.toLong()}", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
 
+                    if (jobFormError != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = jobFormError!!,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(12.dp),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Button(
                         onClick = {
-                            if (selectedCustomer == null || selectedService == null) return@Button
+                            if (selectedCustomer == null) {
+                                jobFormError = "Please select or add a Customer *"
+                                return@Button
+                            }
+                            if (selectedService == null) {
+                                jobFormError = "Please select or add a Service *"
+                                return@Button
+                            }
+                            if (totalMin <= 0) {
+                                jobFormError = "Please enter working duration (Hours or Minutes) *"
+                                return@Button
+                            }
+                            jobFormError = null
+                            isSavingJob = true
                             scope.launch {
                                 val existingJob = jobsState.value.find { 
                                     it.customerId == selectedCustomer!!.customerId && 
@@ -460,18 +523,27 @@ fun ManualJobScreen(
                                 )
                                 repository.saveCustomer(updatedCust)
 
+                                isSavingJob = false
                                 onFinish()
                             }
                         },
-                        enabled = selectedCustomer != null && selectedService != null,
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        enabled = !isSavingJob,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(
-                            text = if (selectedCustomer == null) "Select Customer First" else "Save Job & Bill",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (isSavingJob) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.5.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Save Job & Bill",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -552,7 +624,7 @@ fun ManualJobScreen(
                             val trimmedMobile = newCustomerMobile.trim()
 
                             if (trimmedName.isBlank()) {
-                                customerNameError = "Please enter customer name"
+                                customerNameError = "Please enter customer name *"
                                 return@Button
                             }
                             if (trimmedMobile.isNotEmpty() && trimmedMobile.length < 10) {
@@ -560,6 +632,7 @@ fun ManualJobScreen(
                                 return@Button
                             }
 
+                            isSavingNewCustomer = true
                             scope.launch {
                                 val existing = customersState.value.find { it.name.trim().equals(trimmedName, ignoreCase = true) }
                                 val newCust = existing?.copy(
@@ -582,10 +655,16 @@ fun ManualJobScreen(
                                 newCustomerVillage = ""
                                 customerNameError = null
                                 customerMobileError = null
+                                isSavingNewCustomer = false
                                 showAddCustomerDialog = false
                             }
-                        }
+                        },
+                        enabled = !isSavingNewCustomer
                     ) {
+                        if (isSavingNewCustomer) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                         Text("Save Customer")
                     }
                 },
@@ -603,15 +682,28 @@ fun ManualJobScreen(
 
         // Quick Add Service Dialog
         if (showAddServiceDialog) {
+            val isServiceNameError = serviceNameError != null && newServiceName.isBlank()
             AlertDialog(
-                onDismissRequest = { showAddServiceDialog = false },
+                onDismissRequest = { 
+                    showAddServiceDialog = false 
+                    serviceNameError = null
+                },
                 title = { Text("Add New Service", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(
                             value = newServiceName,
-                            onValueChange = { newServiceName = it },
+                            onValueChange = { 
+                                newServiceName = it
+                                serviceNameError = null
+                            },
                             label = { Text("Service Name * (e.g. Harrowing)") },
+                            isError = isServiceNameError,
+                            supportingText = {
+                                if (isServiceNameError) {
+                                    Text("Service name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp)
@@ -619,7 +711,7 @@ fun ManualJobScreen(
                         OutlinedTextField(
                             value = newServiceRate,
                             onValueChange = { newServiceRate = it },
-                            label = { Text("Hourly Rate (₹)") },
+                            label = { Text("Hourly Rate (₹) *") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp)
@@ -629,30 +721,42 @@ fun ManualJobScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            if (newServiceName.isNotBlank()) {
-                                val sRate = round(newServiceRate.toDoubleOrNull() ?: 500.0)
-                                scope.launch {
-                                    val newSrv = ServiceItem(
-                                        serviceId = "srv_${System.currentTimeMillis()}",
-                                        userId = currentUserId,
-                                        name = newServiceName.trim(),
-                                        hourlyRate = sRate,
-                                        minuteRate = sRate / 60.0
-                                    )
-                                    repository.saveService(newSrv)
-                                    selectedService = newSrv
-                                    rate = sRate.toInt().toString()
-                                    newServiceName = ""
-                                    showAddServiceDialog = false
-                                }
+                            if (newServiceName.isBlank()) {
+                                serviceNameError = "Service name is required *"
+                                return@Button
                             }
-                        }
+                            isSavingNewService = true
+                            val sRate = round(newServiceRate.toDoubleOrNull() ?: 500.0)
+                            scope.launch {
+                                val newSrv = ServiceItem(
+                                    serviceId = "srv_${System.currentTimeMillis()}",
+                                    userId = currentUserId,
+                                    name = newServiceName.trim(),
+                                    hourlyRate = sRate,
+                                    minuteRate = sRate / 60.0
+                                )
+                                repository.saveService(newSrv)
+                                selectedService = newSrv
+                                rate = sRate.toInt().toString()
+                                newServiceName = ""
+                                isSavingNewService = false
+                                showAddServiceDialog = false
+                            }
+                        },
+                        enabled = !isSavingNewService
                     ) {
+                        if (isSavingNewService) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                         Text("Save Service")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showAddServiceDialog = false }) {
+                    TextButton(onClick = { 
+                        showAddServiceDialog = false 
+                        serviceNameError = null
+                    }) {
                         Text("Cancel")
                     }
                 }

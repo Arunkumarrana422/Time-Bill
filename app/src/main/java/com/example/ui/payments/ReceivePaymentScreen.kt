@@ -346,6 +346,8 @@ fun ReceivePaymentScreen(
                     }
 
                     // Payment Amount
+                    val amtVal = payAmount.toDoubleOrNull() ?: 0.0
+                    val isAmountError = errorMessage != null && amtVal <= 0.0
                     OutlinedTextField(
                         value = payAmount,
                         onValueChange = {
@@ -356,6 +358,12 @@ fun ReceivePaymentScreen(
                         leadingIcon = { Icon(Icons.Default.CurrencyRupee, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
+                        isError = isAmountError,
+                        supportingText = {
+                            if (isAmountError) {
+                                Text("Payment amount is required (greater than ₹0) *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                            }
+                        },
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     )

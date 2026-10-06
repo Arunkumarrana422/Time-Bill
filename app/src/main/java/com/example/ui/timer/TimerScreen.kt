@@ -77,11 +77,15 @@ fun TimerScreen(
     var showAddServiceDialog by remember { mutableStateOf(false) }
     var newServiceName by remember { mutableStateOf("") }
     var newServiceRate by remember { mutableStateOf("500") }
+    var serviceNameError by remember { mutableStateOf<String?>(null) }
+    var isSavingCustomerDialog by remember { mutableStateOf(false) }
+    var isSavingServiceDialog by remember { mutableStateOf(false) }
 
     // Finish / Review Dialog state
     var showReviewDialog by remember { mutableStateOf(false) }
     var editableRate by remember { mutableStateOf("500") }
     var editableAmount by remember { mutableStateOf("0") }
+    var isSavingJobReview by remember { mutableStateOf(false) }
 
     // BackHandler: User can go back, timer will keep running in background!
     BackHandler { onFinish() }
@@ -537,7 +541,7 @@ fun TimerScreen(
                             val trimmedMobile = newCustomerMobile.trim()
 
                             if (trimmedName.isBlank()) {
-                                customerNameError = "Please enter customer name"
+                                customerNameError = "Please enter customer name *"
                                 return@Button
                             }
                             if (trimmedMobile.isNotEmpty() && trimmedMobile.length < 10) {
@@ -545,6 +549,7 @@ fun TimerScreen(
                                 return@Button
                             }
 
+                            isSavingCustomerDialog = true
                             scope.launch {
                                 val existing = customersState.value.find { it.name.trim().equals(trimmedName, ignoreCase = true) }
                                 val newCust = existing?.copy(
@@ -567,10 +572,16 @@ fun TimerScreen(
                                 newCustomerVillage = ""
                                 customerNameError = null
                                 customerMobileError = null
+                                isSavingCustomerDialog = false
                                 showAddCustomerDialog = false
                             }
-                        }
+                        },
+                        enabled = !isSavingCustomerDialog
                     ) {
+                        if (isSavingCustomerDialog) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                         Text("Save Customer")
                     }
                 },
@@ -588,23 +599,36 @@ fun TimerScreen(
 
         // Quick Add Service Dialog
         if (showAddServiceDialog) {
+            val isServiceNameError = serviceNameError != null && newServiceName.isBlank()
             AlertDialog(
-                onDismissRequest = { showAddServiceDialog = false },
+                onDismissRequest = { 
+                    showAddServiceDialog = false 
+                    serviceNameError = null
+                },
                 title = { Text("Add New Service", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(
                             value = newServiceName,
-                            onValueChange = { newServiceName = it },
+                            onValueChange = { 
+                                newServiceName = it
+                                serviceNameError = null
+                            },
                             label = { Text("Service Name * (e.g. Harrowing)") },
                             singleLine = true,
+                            isError = isServiceNameError,
+                            supportingText = {
+                                if (isServiceNameError) {
+                                    Text("Service name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp)
                         )
                         OutlinedTextField(
                             value = newServiceRate,
                             onValueChange = { newServiceRate = it },
-                            label = { Text("Hourly Rate (₹)") },
+                            label = { Text("Hourly Rate (₹) *") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp)
@@ -614,30 +638,42 @@ fun TimerScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            if (newServiceName.isNotBlank()) {
-                                val sRate = round(newServiceRate.toDoubleOrNull() ?: 500.0)
-                                scope.launch {
-                                    val newSrv = ServiceItem(
-                                        serviceId = "srv_${System.currentTimeMillis()}",
-                                        userId = currentUserId,
-                                        name = newServiceName.trim(),
-                                        hourlyRate = sRate,
-                                        minuteRate = sRate / 60.0
-                                    )
-                                    repository.saveService(newSrv)
-                                    selectedService = newSrv
-                                    customRate = sRate.toInt().toString()
-                                    newServiceName = ""
-                                    showAddServiceDialog = false
-                                }
+                            if (newServiceName.isBlank()) {
+                                serviceNameError = "Service name is required *"
+                                return@Button
                             }
-                        }
+                            isSavingServiceDialog = true
+                            val sRate = round(newServiceRate.toDoubleOrNull() ?: 500.0)
+                            scope.launch {
+                                val newSrv = ServiceItem(
+                                    serviceId = "srv_${System.currentTimeMillis()}",
+                                    userId = currentUserId,
+                                    name = newServiceName.trim(),
+                                    hourlyRate = sRate,
+                                    minuteRate = sRate / 60.0
+                                )
+                                repository.saveService(newSrv)
+                                selectedService = newSrv
+                                customRate = sRate.toInt().toString()
+                                newServiceName = ""
+                                isSavingServiceDialog = false
+                                showAddServiceDialog = false
+                            }
+                        },
+                        enabled = !isSavingServiceDialog
                     ) {
+                        if (isSavingServiceDialog) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                         Text("Save Service")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showAddServiceDialog = false }) {
+                    TextButton(onClick = { 
+                        showAddServiceDialog = false 
+                        serviceNameError = null
+                    }) {
                         Text("Cancel")
                     }
                 }
@@ -686,6 +722,7 @@ fun TimerScreen(
                             val srv = activeTimerData.service ?: selectedService
                             val noteText = activeTimerData.notes.ifBlank { notes }
 
+                            isSavingJobReview = true
                             scope.launch {
                                 val existingJob = jobsState.value.find { 
                                     it.customerId == (cust?.customerId ?: "") && 
@@ -744,11 +781,17 @@ fun TimerScreen(
                                 }
 
                                 TimerStateManager.stopTimer(context)
+                                isSavingJobReview = false
                                 showReviewDialog = false
                                 onFinish()
                             }
-                        }
+                        },
+                        enabled = !isSavingJobReview
                     ) {
+                        if (isSavingJobReview) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                         Text("Confirm & Save")
                     }
                 },

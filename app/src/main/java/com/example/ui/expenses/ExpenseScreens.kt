@@ -41,6 +41,8 @@ fun ExpenseListScreen(
     var category by remember { mutableStateOf("Fuel / Diesel") }
     var amount by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    var expenseError by remember { mutableStateOf<String?>(null) }
+    var isSavingExpense by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -133,16 +135,32 @@ fun ExpenseListScreen(
         }
 
         if (showAddDialog) {
+            val isNameError = expenseError != null && name.isBlank()
+            val amtVal = amount.toDoubleOrNull() ?: 0.0
+            val isAmountError = expenseError != null && amtVal <= 0.0
+
             AlertDialog(
-                onDismissRequest = { showAddDialog = false },
+                onDismissRequest = { 
+                    showAddDialog = false 
+                    expenseError = null
+                },
                 title = { Text("Add Business Expense", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedTextField(
                             value = name,
-                            onValueChange = { name = it },
+                            onValueChange = { 
+                                name = it
+                                expenseError = null
+                            },
                             label = { Text("Expense Name * (e.g. Diesel)") },
                             singleLine = true,
+                            isError = isNameError,
+                            supportingText = {
+                                if (isNameError) {
+                                    Text("Expense name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            },
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -156,9 +174,18 @@ fun ExpenseListScreen(
                         )
                         OutlinedTextField(
                             value = amount,
-                            onValueChange = { amount = it },
+                            onValueChange = { 
+                                amount = it
+                                expenseError = null
+                            },
                             label = { Text("Amount (₹) *") },
                             singleLine = true,
+                            isError = isAmountError,
+                            supportingText = {
+                                if (isAmountError) {
+                                    Text("Valid amount greater than ₹0 is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            },
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -175,7 +202,15 @@ fun ExpenseListScreen(
                     Button(
                         onClick = {
                             val amt = round(amount.toDoubleOrNull() ?: 0.0)
-                            if (name.isBlank() || amt <= 0) return@Button
+                            if (name.isBlank()) {
+                                expenseError = "Expense name is required *"
+                                return@Button
+                            }
+                            if (amt <= 0) {
+                                expenseError = "Valid amount greater than ₹0 is required *"
+                                return@Button
+                            }
+                            isSavingExpense = true
                             scope.launch {
                                 val expId = "exp_${System.currentTimeMillis()}"
                                 val expense = Expense(
@@ -191,15 +226,25 @@ fun ExpenseListScreen(
                                 name = ""
                                 amount = ""
                                 description = ""
+                                expenseError = null
+                                isSavingExpense = false
                                 showAddDialog = false
                             }
-                        }
+                        },
+                        enabled = !isSavingExpense
                     ) {
+                        if (isSavingExpense) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                         Text("Save Expense")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showAddDialog = false }) {
+                    TextButton(onClick = { 
+                        showAddDialog = false 
+                        expenseError = null
+                    }) {
                         Text("Cancel")
                     }
                 }
