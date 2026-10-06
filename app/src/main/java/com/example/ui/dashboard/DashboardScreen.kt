@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import com.example.data.model.Job
 import com.example.data.repository.TimeBillRepository
+import com.example.ui.jobs.JobCard
 import com.example.ui.navigation.Screen
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.delay
@@ -372,47 +373,10 @@ fun DashboardScreen(
                     }
                 } else {
                     items(recentJobs, key = { it.jobId }) { job ->
-                        val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-                        val jobCardShape = RoundedCornerShape(14.dp)
-                        Card(
-                            onClick = { onNavigate(Screen.JobDetail.createRoute(job.jobId)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = jobCardShape,
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surface
-                            ),
-                            border = if (isDark) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)) else null,
-                            elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 4.dp, pressedElevation = 7.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(job.customerName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    Text(job.serviceName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                     Text(job.date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
-                                    Text("Duration: ${job.billableDurationMinutes / 60}h ${job.billableDurationMinutes % 60}m", style = MaterialTheme.typography.bodySmall)
-                                }
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text("₹${formatIndianCurrency(job.finalAmount)}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
-                                    val isPaid = job.pendingAmount <= 0.0
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = if (isPaid) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
-                                    ) {
-                                        Text(
-                                            text = if (isPaid) "Paid" else "Pending: ₹${formatIndianCurrency(job.pendingAmount)}",
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                            fontSize = 11.sp,
-                                            color = if (isPaid) Color(0xFF166534) else Color(0xFF991B1B),
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        JobCard(
+                            job = job,
+                            onClick = { onNavigate(Screen.JobDetail.createRoute(job.jobId)) }
+                        )
                     }
                 }
             }
