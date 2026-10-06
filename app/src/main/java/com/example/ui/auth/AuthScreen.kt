@@ -112,12 +112,8 @@ fun AuthScreen(
                     .setAutoSelectEnabled(false)
                     .build()
 
-                val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(serverClientId)
-                    .build()
-
                 val request = GetCredentialRequest.Builder()
                     .addCredentialOption(googleIdOption)
-                    .addCredentialOption(signInWithGoogleOption)
                     .build()
 
                 val result = credentialManager.getCredential(
@@ -151,19 +147,19 @@ fun AuthScreen(
                         val displayName = user.displayName ?: ""
                         val photoUrl = user.photoUrl?.toString() ?: ""
 
-                        val existing = repository?.getUser(uid)
-                        val profile = existing ?: UserProfile(
-                            userId = uid,
-                            name = displayName.ifBlank { "Google User" },
-                            businessName = "My Business",
-                            mobile = "",
-                            isSetupComplete = displayName.isNotBlank(),
-                            profilePhotoUri = photoUrl
-                        )
-                        if (repository != null) {
+                        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
                             try {
-                                repository.saveUserProfile(profile)
-                                repository.fetchAndCacheUserProfile(uid)
+                                val existing = repository?.getUser(uid)
+                                val profile = existing ?: UserProfile(
+                                    userId = uid,
+                                    name = displayName.ifBlank { "Google User" },
+                                    businessName = "My Business",
+                                    mobile = "",
+                                    isSetupComplete = displayName.isNotBlank(),
+                                    profilePhotoUri = photoUrl
+                                )
+                                repository?.saveUserProfile(profile)
+                                repository?.fetchAndCacheUserProfile(uid)
                             } catch (eProfile: Exception) {
                                 Log.e("AuthScreen", "Profile save on Google sign in: ${eProfile.message}")
                             }
@@ -181,15 +177,16 @@ fun AuthScreen(
                 val msg = e.localizedMessage ?: e.message ?: e.toString()
                 Log.e("AuthScreen", "Google Sign In error: $msg", e)
                 errorMessage = when {
-                    msg.contains("16", ignoreCase = true) || msg.contains("Canceled", ignoreCase = true) ->
-                        null
+                    msg.contains("Canceled by user", ignoreCase = true) -> null
+                    msg.contains("16", ignoreCase = true) || msg.contains("Cannot find a matching credential", ignoreCase = true) ->
+                        "Google Play Services Sync (16): Google is still propagating your SHA-1 key. Please wait 1-2 minutes and tap again."
                     msg.contains("10", ignoreCase = true) || msg.contains("DEVELOPER_ERROR", ignoreCase = true) || msg.contains("12500", ignoreCase = true) ->
-                        "Google Sign-In configuration error: Please verify SHA-1 fingerprint is added in Firebase Console and wait 1-2 minutes for sync."
+                        "Configuration Sync (10): SHA-1 fingerprint is propagating in Google Cloud. Please retry in 1-2 minutes."
                     msg.contains("disabled", ignoreCase = true) || msg.contains("provider is disabled", ignoreCase = true) ->
-                        "Google Sign-in provider is disabled. Please enable 'Google' in Firebase Console -> Authentication -> Sign-in method."
+                        "Google Sign-in provider is disabled in Firebase Console."
                     msg.contains("network", ignoreCase = true) ->
                         "Network error. Please check your internet connection."
-                    else -> "Google Sign-In failed: $msg"
+                    else -> "Google Sign-In: $msg"
                 }
             } finally {
                 isLoading = false
