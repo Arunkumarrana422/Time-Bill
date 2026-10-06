@@ -1,5 +1,8 @@
 package com.example.ui.auth
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -35,6 +38,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.example.R
 import com.example.data.model.UserProfile
 import com.example.data.repository.TimeBillRepository
@@ -52,6 +56,15 @@ import com.google.firebase.auth.auth
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+
+private fun Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
+}
 
 @Composable
 fun AuthScreen(
@@ -103,36 +116,63 @@ fun AuthScreen(
         successMessage = null
         scope.launch {
             try {
-                val credentialManager = CredentialManager.create(context)
+                val activityContext = context.findActivity() ?: context
+                val credentialManager = CredentialManager.create(activityContext)
                 val serverClientId = context.getString(R.string.default_web_client_id)
 
-                val googleIdOption = GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(serverClientId)
-                    .setAutoSelectEnabled(false)
-                    .build()
+                var idToken: String? = null
 
-                val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(googleIdOption)
-                    .build()
-
-                val result = credentialManager.getCredential(
-                    request = request,
-                    context = context
-                )
-
-                val credential = result.credential
-                val idToken: String? = when {
-                    credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
-                        try {
-                            GoogleIdTokenCredential.createFrom(credential.data).idToken
-                        } catch (e: Exception) {
-                            credential.data.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_ID_TOKEN")
+                // Attempt 1: Try GetSignInWithGoogleOption (standard account picker)
+                try {
+                    val signInOption = GetSignInWithGoogleOption.Builder(serverClientId).build()
+                    val request = GetCredentialRequest.Builder()
+                        .addCredentialOption(signInOption)
+                        .build()
+                    val result = credentialManager.getCredential(request = request, context = activityContext)
+                    val cred = result.credential
+                    idToken = when {
+                        cred is CustomCredential && cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
+                            try {
+                                GoogleIdTokenCredential.createFrom(cred.data).idToken
+                            } catch (e: Exception) {
+                                cred.data.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_ID_TOKEN")
+                            }
+                        }
+                        else -> {
+                            cred.data.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_ID_TOKEN")
+                                ?: cred.data.getString("id_token")
                         }
                     }
-                    else -> {
-                        credential.data.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_ID_TOKEN")
-                            ?: credential.data.getString("id_token")
+                } catch (e: GetCredentialCancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.d("AuthScreen", "GetSignInWithGoogleOption attempt note: ${e.message}")
+                }
+
+                // Attempt 2: If idToken is null, try GetGoogleIdOption with filterByAuthorizedAccounts = false
+                if (idToken == null) {
+                    val googleIdOption = GetGoogleIdOption.Builder()
+                        .setFilterByAuthorizedAccounts(false)
+                        .setServerClientId(serverClientId)
+                        .setAutoSelectEnabled(false)
+                        .build()
+                    val request = GetCredentialRequest.Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
+                    val result = credentialManager.getCredential(request = request, context = activityContext)
+                    val cred = result.credential
+                    idToken = when {
+                        cred is CustomCredential && cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
+                            try {
+                                GoogleIdTokenCredential.createFrom(cred.data).idToken
+                            } catch (e: Exception) {
+                                cred.data.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_ID_TOKEN")
+                            }
+                        }
+                        else -> {
+                            cred.data.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_ID_TOKEN")
+                                ?: cred.data.getString("id_token")
+                        }
                     }
                 }
 
@@ -178,8 +218,10 @@ fun AuthScreen(
                 Log.e("AuthScreen", "Google Sign In error: $msg", e)
                 errorMessage = when {
                     msg.contains("Canceled by user", ignoreCase = true) -> null
+                    msg.contains("No credentials available", ignoreCase = true) ->
+                        "No credentials available: Please ensure your device has a signed-in Google account and retry."
                     msg.contains("16", ignoreCase = true) || msg.contains("Cannot find a matching credential", ignoreCase = true) ->
-                        "Google Play Services Sync (16): Google is still propagating your SHA-1 key. Please wait 1-2 minutes and tap again."
+                        "Google Play Services Sync (16): Google OAuth credentials are still propagating. Please try again in 1-2 minutes."
                     msg.contains("10", ignoreCase = true) || msg.contains("DEVELOPER_ERROR", ignoreCase = true) || msg.contains("12500", ignoreCase = true) ->
                         "Configuration Sync (10): SHA-1 fingerprint is propagating in Google Cloud. Please retry in 1-2 minutes."
                     msg.contains("disabled", ignoreCase = true) || msg.contains("provider is disabled", ignoreCase = true) ->
