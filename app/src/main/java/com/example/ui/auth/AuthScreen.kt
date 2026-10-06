@@ -39,13 +39,16 @@ import com.example.R
 import com.example.data.model.UserProfile
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.util.clearFocusOnTap
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
+import com.google.firebase.auth.auth
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -103,11 +106,18 @@ fun AuthScreen(
                 val credentialManager = CredentialManager.create(context)
                 val serverClientId = context.getString(R.string.default_web_client_id)
 
-                val googleIdOption = GetSignInWithGoogleOption.Builder(serverClientId)
+                val googleIdOption = GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(false)
+                    .setServerClientId(serverClientId)
+                    .setAutoSelectEnabled(false)
+                    .build()
+
+                val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(serverClientId)
                     .build()
 
                 val request = GetCredentialRequest.Builder()
                     .addCredentialOption(googleIdOption)
+                    .addCredentialOption(signInWithGoogleOption)
                     .build()
 
                 val result = credentialManager.getCredential(
@@ -116,18 +126,30 @@ fun AuthScreen(
                 )
 
                 val credential = result.credential
-                if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                    val idToken = googleIdTokenCredential.idToken
+                val idToken: String? = when {
+                    credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
+                        try {
+                            GoogleIdTokenCredential.createFrom(credential.data).idToken
+                        } catch (e: Exception) {
+                            credential.data.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_ID_TOKEN")
+                        }
+                    }
+                    else -> {
+                        credential.data.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_ID_TOKEN")
+                            ?: credential.data.getString("id_token")
+                    }
+                }
+
+                if (idToken != null) {
                     val authCredential = GoogleAuthProvider.getCredential(idToken, null)
-                    val fAuth = getFirebaseAuth()
+                    val fAuth = try { Firebase.auth } catch (e: Exception) { getFirebaseAuth() }
                     val authResult = fAuth.signInWithCredential(authCredential).await()
                     val user = authResult.user
                     val uid = user?.uid
 
                     if (uid != null) {
-                        val displayName = user.displayName ?: googleIdTokenCredential.displayName ?: ""
-                        val photoUrl = user.photoUrl?.toString() ?: googleIdTokenCredential.profilePictureUri?.toString() ?: ""
+                        val displayName = user.displayName ?: ""
+                        val photoUrl = user.photoUrl?.toString() ?: ""
 
                         val existing = repository?.getUser(uid)
                         val profile = existing ?: UserProfile(
@@ -149,20 +171,22 @@ fun AuthScreen(
                     }
                     onAuthSuccess()
                 } else {
-                    errorMessage = "Unexpected credential received."
+                    errorMessage = "Unable to retrieve Google token. Please try again."
                 }
             } catch (e: GetCredentialCancellationException) {
                 Log.d("AuthScreen", "Google Sign In cancelled by user")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                val msg = e.localizedMessage ?: e.message ?: ""
+                val msg = e.localizedMessage ?: e.message ?: e.toString()
                 Log.e("AuthScreen", "Google Sign In error: $msg", e)
                 errorMessage = when {
                     msg.contains("16", ignoreCase = true) || msg.contains("Canceled", ignoreCase = true) ->
                         null
-                    msg.contains("10", ignoreCase = true) || msg.contains("DeveloperError", ignoreCase = true) ->
-                        "Firebase setup error: Please ensure SHA-1 fingerprint is added in Firebase Console."
+                    msg.contains("10", ignoreCase = true) || msg.contains("DEVELOPER_ERROR", ignoreCase = true) || msg.contains("12500", ignoreCase = true) ->
+                        "Google Sign-In configuration error: Please verify SHA-1 fingerprint is added in Firebase Console and wait 1-2 minutes for sync."
+                    msg.contains("disabled", ignoreCase = true) || msg.contains("provider is disabled", ignoreCase = true) ->
+                        "Google Sign-in provider is disabled. Please enable 'Google' in Firebase Console -> Authentication -> Sign-in method."
                     msg.contains("network", ignoreCase = true) ->
                         "Network error. Please check your internet connection."
                     else -> "Google Sign-In failed: $msg"
