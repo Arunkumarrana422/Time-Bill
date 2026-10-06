@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.Job
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.navigation.Screen
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -50,6 +52,7 @@ fun CustomerDetailScreen(
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var isRefreshing by remember { mutableStateOf(false) }
     val customersState = repository.observeCustomers(currentUserId).collectAsState(initial = emptyList())
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
     val paymentsState = repository.observePayments(currentUserId).collectAsState(initial = emptyList())
@@ -147,13 +150,29 @@ fun CustomerDetailScreen(
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             color = MaterialTheme.colorScheme.surface
         ) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 20.dp + padding.calculateBottomPadding()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    scope.launch {
+                        try {
+                            repository.syncDataFromFirestore(currentUserId)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                        delay(650)
+                        isRefreshing = false
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
             ) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 20.dp + padding.calculateBottomPadding()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
             // Customer Ledger Summary Card
             item {
                 val summaryCardShape = RoundedCornerShape(16.dp)
@@ -314,6 +333,7 @@ fun CustomerDetailScreen(
                     }
                 }
             }
+        }
         }
         }
     }

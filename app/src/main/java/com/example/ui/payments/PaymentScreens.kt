@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.repository.TimeBillRepository
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +33,9 @@ fun PaymentListScreen(
     onBack: () -> Unit
 ) {
     BackHandler { onBack() }
+
+    val scope = rememberCoroutineScope()
+    var isRefreshing by remember { mutableStateOf(false) }
 
     val paymentsState = repository.observePayments(currentUserId).collectAsState(initial = emptyList())
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
@@ -74,11 +80,27 @@ fun PaymentListScreen(
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             color = MaterialTheme.colorScheme.surface
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = padding.calculateBottomPadding())
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    scope.launch {
+                        try {
+                            repository.syncDataFromFirestore(currentUserId)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                        delay(650)
+                        isRefreshing = false
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = padding.calculateBottomPadding())
+                ) {
             // Search Input Box
             Box(modifier = Modifier.padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 10.dp)) {
                 OutlinedTextField(
@@ -182,6 +204,7 @@ fun PaymentListScreen(
                     }
                 }
             }
+        }
         }
         }
     }

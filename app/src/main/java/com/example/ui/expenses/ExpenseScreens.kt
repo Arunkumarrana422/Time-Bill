@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Expense
 import com.example.data.repository.TimeBillRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -33,6 +35,7 @@ fun ExpenseListScreen(
 ) {
     val expensesState = repository.observeExpenses(currentUserId).collectAsState(initial = emptyList())
     var showAddDialog by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(false) }
 
     var name by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("Fuel / Diesel") }
@@ -75,13 +78,29 @@ fun ExpenseListScreen(
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             color = MaterialTheme.colorScheme.surface
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + padding.calculateBottomPadding()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    scope.launch {
+                        try {
+                            repository.syncDataFromFirestore(currentUserId)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                        delay(650)
+                        isRefreshing = false
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
             ) {
-            items(expensesState.value) { expense ->
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + padding.calculateBottomPadding()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(expensesState.value) { expense ->
                 val isDark = androidx.compose.foundation.isSystemInDarkTheme()
                 val expenseCardShape = RoundedCornerShape(14.dp)
                 Card(
@@ -108,6 +127,7 @@ fun ExpenseListScreen(
                         Text("-₹${formatIndianCurrency(expense.amount)}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.error)
                     }
                 }
+            }
             }
         }
         }

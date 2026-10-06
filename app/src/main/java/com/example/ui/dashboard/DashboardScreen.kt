@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +43,7 @@ fun DashboardScreen(
     val context = LocalContext.current
     var backPressedTime by remember { mutableStateOf(0L) }
     var showExitBanner by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     if (showBottomBar) {
@@ -160,11 +162,27 @@ fun DashboardScreen(
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 color = MaterialTheme.colorScheme.surface
             ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp + padding.calculateBottomPadding()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = {
+                        isRefreshing = true
+                        scope.launch {
+                            try {
+                                repository.syncDataFromFirestore(currentUserId)
+                            } catch (e: Exception) {
+                                // ignore
+                            }
+                            delay(650)
+                            isRefreshing = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
                 ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp + padding.calculateBottomPadding()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
                 // Summary Cards Grid
                 item {
                     Row(
@@ -398,6 +416,7 @@ fun DashboardScreen(
                     }
                 }
             }
+        }
         }
         }
 

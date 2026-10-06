@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +57,7 @@ fun CustomerListScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCustomerIds by remember { mutableStateOf(setOf<String>()) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(false) }
 
     val isSelectionMode = selectedCustomerIds.isNotEmpty()
 
@@ -263,11 +265,27 @@ fun CustomerListScreen(
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             color = MaterialTheme.colorScheme.surface
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = padding.calculateBottomPadding())
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    scope.launch {
+                        try {
+                            repository.syncDataFromFirestore(currentUserId)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                        kotlinx.coroutines.delay(650)
+                        isRefreshing = false
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = padding.calculateBottomPadding())
+                ) {
             Box(modifier = Modifier.padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 8.dp)) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
@@ -381,8 +399,9 @@ fun CustomerListScreen(
                 }
             }
         }
-        }
     }
+}
+}
 
     // Delete Confirmation Dialog
     if (showDeleteDialog) {

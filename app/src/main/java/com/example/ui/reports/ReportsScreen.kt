@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.navigation.Screen
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +34,9 @@ fun ReportsScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
+    var isRefreshing by remember { mutableStateOf(false) }
+
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
     val paymentsState = repository.observePayments(currentUserId).collectAsState(initial = emptyList())
     val expensesState = repository.observeExpenses(currentUserId).collectAsState(initial = emptyList())
@@ -101,13 +107,29 @@ fun ReportsScreen(
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             color = MaterialTheme.colorScheme.surface
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + padding.calculateBottomPadding()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    scope.launch {
+                        try {
+                            repository.syncDataFromFirestore(currentUserId)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                        delay(650)
+                        isRefreshing = false
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + padding.calculateBottomPadding()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
             // Net Profit Banner Card
             val isDark = androidx.compose.foundation.isSystemInDarkTheme()
             Card(
@@ -234,6 +256,7 @@ fun ReportsScreen(
                     )
                 }
             }
+        }
         }
         }
     }

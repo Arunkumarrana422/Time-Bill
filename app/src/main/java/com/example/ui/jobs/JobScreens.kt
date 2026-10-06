@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,8 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.Job
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.navigation.Screen
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,8 +51,10 @@ fun JobListScreen(
     onBack: () -> Unit
 ) {
     val jobsState = repository.observeJobs(currentUserId).collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
     var filterStatus by remember { mutableStateOf("All") }
     var searchQuery by remember { mutableStateOf("") }
+    var isRefreshing by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
     var previousJobCount by remember { mutableIntStateOf(jobsState.value.size) }
@@ -144,11 +149,27 @@ fun JobListScreen(
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             color = MaterialTheme.colorScheme.surface
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = padding.calculateBottomPadding())
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    scope.launch {
+                        try {
+                            repository.syncDataFromFirestore(currentUserId)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                        kotlinx.coroutines.delay(650)
+                        isRefreshing = false
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = padding.calculateBottomPadding())
+                ) {
             Box(modifier = Modifier.padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 8.dp)) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     // Search Input
@@ -224,6 +245,7 @@ fun JobListScreen(
                     }
                 }
             }
+        }
         }
         }
     }

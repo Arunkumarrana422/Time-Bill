@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.ServiceItem
 import com.example.data.repository.TimeBillRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,6 +35,7 @@ fun ServiceListScreen(
 ) {
     val servicesState = repository.observeServices(currentUserId).collectAsState(initial = emptyList())
     var showAddDialog by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(false) }
 
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -80,14 +83,30 @@ fun ServiceListScreen(
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             color = MaterialTheme.colorScheme.surface
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 20.dp + padding.calculateBottomPadding()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    scope.launch {
+                        try {
+                            repository.syncDataFromFirestore(currentUserId)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                        delay(650)
+                        isRefreshing = false
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
             ) {
-            items(servicesState.value) { service ->
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 20.dp + padding.calculateBottomPadding()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(servicesState.value) { service ->
                 val isDark = androidx.compose.foundation.isSystemInDarkTheme()
                 val cardShape = RoundedCornerShape(14.dp)
                 Card(
@@ -123,6 +142,8 @@ fun ServiceListScreen(
                             Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         }
                     }
+                }
+            }
                 }
             }
         }
@@ -254,4 +275,3 @@ fun ServiceListScreen(
             )
         }
     }
-}
