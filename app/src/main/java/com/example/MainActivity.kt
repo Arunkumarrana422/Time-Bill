@@ -6,22 +6,30 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.data.repository.TimeBillRepository
 import com.example.data.model.UserProfile
 import com.example.ui.auth.AuthScreen
+import com.example.ui.components.OfflineBanner
+import com.example.ui.navigation.Screen
 import com.example.ui.navigation.TimeBillNavGraph
 import com.example.ui.util.clearFocusOnTap
 import com.example.ui.util.isInitialNetworkConnected
@@ -64,6 +72,8 @@ class MainActivity : ComponentActivity() {
                 val isConnectedState = observeNetworkConnectivity(context).collectAsState(initial = remember { isInitialNetworkConnected(context) })
                 val isConnected = isConnectedState.value
 
+                var isAutoSyncing by remember { mutableStateOf(false) }
+
                 var currentUser by remember {
                     mutableStateOf(
                         try {
@@ -74,6 +84,9 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 val navController = rememberNavController()
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+                var offlineTriggerCount by remember { mutableIntStateOf(0) }
                 val scope = rememberCoroutineScope()
 
                 var userProfile by remember { mutableStateOf<UserProfile?>(null) }
@@ -91,15 +104,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Show offline toast at most once only when active in foreground, never loop or repeat when minimized
                 var previousConnected by remember { mutableStateOf<Boolean?>(null) }
-                var offlineToastShown by remember { mutableStateOf(false) }
 
                 LaunchedEffect(isConnected, isAppResumed) {
-                    val isActivelyForeground = isAppResumed && lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
                     if (isConnected) {
-                        offlineToastShown = false
                         if (previousConnected == false) {
+                            // Automatically trigger loading and sync when internet is restored
+                            isAutoSyncing = true
                             currentUser?.uid?.let { uid ->
                                 scope.launch {
                                     try {
@@ -107,16 +118,13 @@ class MainActivity : ComponentActivity() {
                                     } catch (e: Exception) {
                                         // ignore
                                     }
+                                    delay(1200)
+                                    isAutoSyncing = false
                                 }
+                            } ?: run {
+                                delay(1000)
+                                isAutoSyncing = false
                             }
-                        }
-                    } else {
-                        // Offline
-                        if (isActivelyForeground && previousConnected == true && !offlineToastShown) {
-                            try {
-                                Toast.makeText(context, "No internet connection", Toast.LENGTH_SHORT).show()
-                                offlineToastShown = true
-                            } catch (e: Exception) {}
                         }
                     }
                     previousConnected = isConnected
@@ -137,18 +145,23 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                LaunchedEffect(currentUser) {
+                LaunchedEffect(currentUser, isConnected) {
                     if (currentUser == null) {
                         userProfile = null
                     } else {
                         currentUser?.uid?.let { uid ->
                             scope.launch {
                                 try {
-                                    repository.startRealtimeProfileListener(uid, scope)
-                                    repository.syncDataFromFirestore(uid)
-                                    repository.seedDefaultServicesIfNeeded(uid)
+                                    // 1. Always load local profile from Room Database instantly
                                     val profile = repository.getUser(uid)
                                     userProfile = profile
+                                    repository.seedDefaultServicesIfNeeded(uid)
+
+                                    // 2. Only sync from Firestore when internet is available
+                                    if (isConnected) {
+                                        repository.startRealtimeProfileListener(uid, scope)
+                                        repository.syncDataFromFirestore(uid)
+                                    }
 
                                     repository.observeUserProfile(uid).collectLatest { p ->
                                         userProfile = p
@@ -165,6 +178,18 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxSize()
                         .clearFocusOnTap()
+                        .pointerInput(isConnected, currentRoute) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    if (event.type == PointerEventType.Press) {
+                                        if (!isConnected && currentRoute != Screen.Timer.route) {
+                                            offlineTriggerCount++
+                                        }
+                                    }
+                                }
+                            }
+                        }
                 ) {
                     Surface(modifier = Modifier.fillMaxSize()) {
                         if (currentUser == null) {
@@ -181,6 +206,10 @@ class MainActivity : ComponentActivity() {
                                 repository = repository,
                                 currentUserId = userId,
                                 userProfile = userProfile,
+                                isConnected = isConnected,
+                                onOfflineActionBlocked = {
+                                    offlineTriggerCount++
+                                },
                                 onSignOut = {
                                     try {
                                         Firebase.auth.signOut()
@@ -193,41 +222,45 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Blocking Offline Overlay when no internet
-                    if (!isConnected) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.96f))
-                                .zIndex(9999f),
-                            contentAlignment = Alignment.Center
+                    // Top Offline Banner matching reference video sample
+                    OfflineBanner(
+                        isOffline = !isConnected,
+                        triggerKey = offlineTriggerCount,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+
+                    // Automatic loading & sync indicator when internet returns
+                    AnimatedVisibility(
+                        visible = isAutoSyncing,
+                        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .statusBarsPadding()
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
+                            .zIndex(9999f)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shadowElevation = 6.dp,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                         ) {
-                            Column(
-                                modifier = Modifier.padding(28.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.CloudOff,
-                                    contentDescription = "No Internet",
-                                    modifier = Modifier.size(72.dp),
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                                Text(
-                                    text = "No Internet Connection",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                                Text(
-                                    text = "Application activity and data loading are paused because there is no active internet connection. The warning toast will remain until connection is re-established.\n\nOnce internet is found, the app will resume automatically.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                                 CircularProgressIndicator(
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.5.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "Internet restored • Syncing data...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }

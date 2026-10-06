@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -29,12 +30,21 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import com.example.R
 import com.example.data.model.UserProfile
 import com.example.data.repository.TimeBillRepository
 import com.example.ui.util.clearFocusOnTap
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -81,6 +91,85 @@ fun AuthScreen(
                 FirebaseApp.getInstance()
             }
             FirebaseAuth.getInstance(app)
+        }
+    }
+
+    fun signInWithGoogle() {
+        isLoading = true
+        errorMessage = null
+        successMessage = null
+        scope.launch {
+            try {
+                val credentialManager = CredentialManager.create(context)
+                val serverClientId = context.getString(R.string.default_web_client_id)
+
+                val googleIdOption = GetSignInWithGoogleOption.Builder(serverClientId)
+                    .build()
+
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleIdOption)
+                    .build()
+
+                val result = credentialManager.getCredential(
+                    request = request,
+                    context = context
+                )
+
+                val credential = result.credential
+                if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    val idToken = googleIdTokenCredential.idToken
+                    val authCredential = GoogleAuthProvider.getCredential(idToken, null)
+                    val fAuth = getFirebaseAuth()
+                    val authResult = fAuth.signInWithCredential(authCredential).await()
+                    val user = authResult.user
+                    val uid = user?.uid
+
+                    if (uid != null) {
+                        val displayName = user.displayName ?: googleIdTokenCredential.displayName ?: ""
+                        val photoUrl = user.photoUrl?.toString() ?: googleIdTokenCredential.profilePictureUri?.toString() ?: ""
+
+                        val existing = repository?.getUser(uid)
+                        val profile = existing ?: UserProfile(
+                            userId = uid,
+                            name = displayName.ifBlank { "Google User" },
+                            businessName = "My Business",
+                            mobile = "",
+                            isSetupComplete = displayName.isNotBlank(),
+                            profilePhotoUri = photoUrl
+                        )
+                        if (repository != null) {
+                            try {
+                                repository.saveUserProfile(profile)
+                                repository.fetchAndCacheUserProfile(uid)
+                            } catch (eProfile: Exception) {
+                                Log.e("AuthScreen", "Profile save on Google sign in: ${eProfile.message}")
+                            }
+                        }
+                    }
+                    onAuthSuccess()
+                } else {
+                    errorMessage = "Unexpected credential received."
+                }
+            } catch (e: GetCredentialCancellationException) {
+                Log.d("AuthScreen", "Google Sign In cancelled by user")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val msg = e.localizedMessage ?: e.message ?: ""
+                Log.e("AuthScreen", "Google Sign In error: $msg", e)
+                errorMessage = when {
+                    msg.contains("16", ignoreCase = true) || msg.contains("Canceled", ignoreCase = true) ->
+                        null
+                    msg.contains("10", ignoreCase = true) || msg.contains("DeveloperError", ignoreCase = true) ->
+                        "Firebase setup error: Please ensure SHA-1 fingerprint is added in Firebase Console."
+                    msg.contains("network", ignoreCase = true) ->
+                        "Network error. Please check your internet connection."
+                    else -> "Google Sign-In failed: $msg"
+                }
+            } finally {
+                isLoading = false
+            }
         }
     }
 
@@ -470,6 +559,69 @@ fun AuthScreen(
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold
                                 )
+                            }
+                        }
+
+                        if (!isForgotPassword) {
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Or divider
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                HorizontalDivider(
+                                    modifier = Modifier.weight(1f),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                                )
+                                Text(
+                                    text = "  OR  ",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.weight(1f),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Google Sign In Button
+                            OutlinedButton(
+                                onClick = { signInWithGoogle() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                enabled = !isLoading,
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outlineVariant
+                                )
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_google_logo),
+                                        contentDescription = "Google Logo",
+                                        tint = Color.Unspecified,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = "Sign in with Google",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
                             }
                         }
 

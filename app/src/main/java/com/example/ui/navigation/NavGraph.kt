@@ -60,9 +60,19 @@ fun TimeBillNavGraph(
     repository: TimeBillRepository,
     currentUserId: String,
     userProfile: UserProfile?,
+    isConnected: Boolean = true,
+    onOfflineActionBlocked: () -> Unit = {},
     onSignOut: () -> Unit
 ) {
     val startRoute = Screen.MainTabs.route
+
+    val safeNavigate: (String) -> Unit = { route ->
+        if (!isConnected && route != Screen.Timer.route) {
+            onOfflineActionBlocked()
+        } else {
+            navController.navigate(route)
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -97,13 +107,15 @@ fun TimeBillNavGraph(
                 currentUserId = currentUserId,
                 repository = repository,
                 initialTab = 0,
-                onNavigate = { route -> navController.navigate(route) },
+                isConnected = isConnected,
+                onOfflineActionBlocked = onOfflineActionBlocked,
+                onNavigate = safeNavigate,
                 onSignOut = onSignOut
             )
         }
         composable(Screen.Onboarding.route) {
             OnboardingScreen(
-                onFinish = { navController.navigate(Screen.Setup.route) { popUpTo(Screen.Onboarding.route) { inclusive = true } } }
+                onFinish = { safeNavigate(Screen.Setup.route) }
             )
         }
         composable(Screen.Auth.route) {
@@ -149,7 +161,7 @@ fun TimeBillNavGraph(
                 currentUserId = currentUserId,
                 customerId = customerId,
                 repository = repository,
-                onNavigate = { route -> navController.navigate(route) },
+                onNavigate = safeNavigate,
                 onBack = { navController.popBackStack() }
             )
         }
@@ -191,7 +203,7 @@ fun TimeBillNavGraph(
             PaymentListScreen(
                 currentUserId = currentUserId,
                 repository = repository,
-                onNavigate = { route -> navController.navigate(route) },
+                onNavigate = safeNavigate,
                 onBack = { navController.popBackStack() }
             )
         }

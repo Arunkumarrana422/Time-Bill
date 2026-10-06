@@ -27,6 +27,8 @@ fun MainTabContainerScreen(
     currentUserId: String,
     repository: TimeBillRepository,
     initialTab: Int = 0,
+    isConnected: Boolean = true,
+    onOfflineActionBlocked: () -> Unit = {},
     onNavigate: (String) -> Unit,
     onSignOut: () -> Unit
 ) {
@@ -55,13 +57,17 @@ fun MainTabContainerScreen(
 
     // Direct tab navigation handler for inner quick actions and buttons
     val handleTabNavigation: (String) -> Unit = { route ->
-        when (route) {
-            Screen.Dashboard.route -> scope.launch { pagerState.animateScrollToPage(0) }
-            Screen.Jobs.route -> scope.launch { pagerState.animateScrollToPage(1) }
-            Screen.Customers.route -> scope.launch { pagerState.animateScrollToPage(2) }
-            Screen.Reports.route -> scope.launch { pagerState.animateScrollToPage(3) }
-            Screen.Settings.route -> scope.launch { pagerState.animateScrollToPage(4) }
-            else -> onNavigate(route)
+        if (!isConnected && route != Screen.Timer.route) {
+            onOfflineActionBlocked()
+        } else {
+            when (route) {
+                Screen.Dashboard.route -> scope.launch { pagerState.animateScrollToPage(0) }
+                Screen.Jobs.route -> scope.launch { pagerState.animateScrollToPage(1) }
+                Screen.Customers.route -> scope.launch { pagerState.animateScrollToPage(2) }
+                Screen.Reports.route -> scope.launch { pagerState.animateScrollToPage(3) }
+                Screen.Settings.route -> scope.launch { pagerState.animateScrollToPage(4) }
+                else -> onNavigate(route)
+            }
         }
     }
 
@@ -75,37 +81,68 @@ fun MainTabContainerScreen(
                     icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
                     label = { Text("Home") },
                     selected = pagerState.currentPage == 0,
-                    onClick = { scope.launch { pagerState.animateScrollToPage(0) } }
+                    onClick = {
+                        if (!isConnected && pagerState.currentPage != 0) {
+                            onOfflineActionBlocked()
+                        } else {
+                            scope.launch { pagerState.animateScrollToPage(0) }
+                        }
+                    }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Work, contentDescription = "Jobs") },
                     label = { Text("Jobs") },
                     selected = pagerState.currentPage == 1,
-                    onClick = { scope.launch { pagerState.animateScrollToPage(1) } }
+                    onClick = {
+                        if (!isConnected) {
+                            onOfflineActionBlocked()
+                        } else {
+                            scope.launch { pagerState.animateScrollToPage(1) }
+                        }
+                    }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.People, contentDescription = "Customers") },
                     label = { Text("Customers") },
                     selected = pagerState.currentPage == 2,
-                    onClick = { scope.launch { pagerState.animateScrollToPage(2) } }
+                    onClick = {
+                        if (!isConnected) {
+                            onOfflineActionBlocked()
+                        } else {
+                            scope.launch { pagerState.animateScrollToPage(2) }
+                        }
+                    }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.BarChart, contentDescription = "Reports") },
                     label = { Text("Reports") },
                     selected = pagerState.currentPage == 3,
-                    onClick = { scope.launch { pagerState.animateScrollToPage(3) } }
+                    onClick = {
+                        if (!isConnected) {
+                            onOfflineActionBlocked()
+                        } else {
+                            scope.launch { pagerState.animateScrollToPage(3) }
+                        }
+                    }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                     label = { Text("Settings") },
                     selected = pagerState.currentPage == 4,
-                    onClick = { scope.launch { pagerState.animateScrollToPage(4) } }
+                    onClick = {
+                        if (!isConnected) {
+                            onOfflineActionBlocked()
+                        } else {
+                            scope.launch { pagerState.animateScrollToPage(4) }
+                        }
+                    }
                 )
             }
         }
     ) { padding ->
         HorizontalPager(
             state = pagerState,
+            userScrollEnabled = isConnected,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = padding.calculateBottomPadding())

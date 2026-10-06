@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.R
 import com.example.data.local.AppDatabase
 import com.example.data.model.*
+import com.example.ui.util.isInitialNetworkConnected
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FieldValue
@@ -63,6 +64,7 @@ class TimeBillRepository(private val context: Context) {
 
     suspend fun fetchAndCacheUserProfile(userId: String): UserProfile? {
         if (userId.isEmpty() || userId == "local_offline_user") return null
+        if (!isInitialNetworkConnected(context)) return null
         return withContext(Dispatchers.IO) {
             try {
                 val doc = db.collection("users").document(userId).get().await()
@@ -87,15 +89,12 @@ class TimeBillRepository(private val context: Context) {
             val uid = if (profile.userId.isNotBlank()) profile.userId else auth.currentUser?.uid ?: "local_offline_user"
             val cleanProfile = profile.copy(userId = uid)
             appDb.userDao().insertUser(cleanProfile)
-            if (uid.isNotEmpty() && uid != "local_offline_user") {
+            if (uid.isNotEmpty() && uid != "local_offline_user" && isInitialNetworkConnected(context)) {
                 try {
                     db.collection("users").document(uid).set(cleanProfile).await()
                     Log.d("Repo", "User profile synced successfully to Firestore for $uid")
                 } catch (e: Exception) {
                     Log.e("Repo", "Firestore sync exception for user profile", e)
-                    try {
-                        db.collection("users").document(uid).set(cleanProfile)
-                    } catch (_: Exception) {}
                 }
             }
         }
@@ -103,6 +102,7 @@ class TimeBillRepository(private val context: Context) {
 
     fun startRealtimeProfileListener(userId: String, scope: CoroutineScope) {
         if (userId.isEmpty() || userId == "local_offline_user") return
+        if (!isInitialNetworkConnected(context)) return
         profileListener?.remove()
         try {
             profileListener = db.collection("users").document(userId).addSnapshotListener { snapshot, error ->
@@ -133,7 +133,7 @@ class TimeBillRepository(private val context: Context) {
         withContext(Dispatchers.IO) {
             appDb.customerDao().insertCustomer(customer)
             val uid = requireUserId()
-            if (uid != "local_offline_user") {
+            if (uid != "local_offline_user" && isInitialNetworkConnected(context)) {
                 try {
                     db.collection("users").document(uid).collection("customers").document(customer.customerId)
                         .set(customer)
@@ -149,7 +149,7 @@ class TimeBillRepository(private val context: Context) {
         withContext(Dispatchers.IO) {
             appDb.customerDao().deleteCustomer(customer)
             val uid = requireUserId()
-            if (uid != "local_offline_user") {
+            if (uid != "local_offline_user" && isInitialNetworkConnected(context)) {
                 try {
                     db.collection("users").document(uid).collection("customers").document(customer.customerId)
                         .delete()
@@ -167,7 +167,7 @@ class TimeBillRepository(private val context: Context) {
         withContext(Dispatchers.IO) {
             appDb.serviceDao().insertService(service)
             val uid = requireUserId()
-            if (uid != "local_offline_user") {
+            if (uid != "local_offline_user" && isInitialNetworkConnected(context)) {
                 try {
                     db.collection("users").document(uid).collection("services").document(service.serviceId)
                         .set(service)
@@ -192,7 +192,7 @@ class TimeBillRepository(private val context: Context) {
         withContext(Dispatchers.IO) {
             appDb.jobDao().insertJob(job)
             val uid = requireUserId()
-            if (uid != "local_offline_user") {
+            if (uid != "local_offline_user" && isInitialNetworkConnected(context)) {
                 try {
                     db.collection("users").document(uid).collection("jobs").document(job.jobId)
                         .set(job)
@@ -208,7 +208,7 @@ class TimeBillRepository(private val context: Context) {
         withContext(Dispatchers.IO) {
             appDb.jobDao().deleteJob(job)
             val uid = requireUserId()
-            if (uid != "local_offline_user") {
+            if (uid != "local_offline_user" && isInitialNetworkConnected(context)) {
                 try {
                     db.collection("users").document(uid).collection("jobs").document(job.jobId)
                         .delete()
@@ -226,7 +226,7 @@ class TimeBillRepository(private val context: Context) {
         withContext(Dispatchers.IO) {
             appDb.paymentDao().insertPayment(payment)
             val uid = requireUserId()
-            if (uid != "local_offline_user") {
+            if (uid != "local_offline_user" && isInitialNetworkConnected(context)) {
                 try {
                     db.collection("users").document(uid).collection("payments").document(payment.paymentId)
                         .set(payment)
@@ -242,7 +242,7 @@ class TimeBillRepository(private val context: Context) {
         withContext(Dispatchers.IO) {
             appDb.paymentDao().deletePayment(payment)
             val uid = requireUserId()
-            if (uid != "local_offline_user") {
+            if (uid != "local_offline_user" && isInitialNetworkConnected(context)) {
                 try {
                     db.collection("users").document(uid).collection("payments").document(payment.paymentId)
                         .delete()
@@ -260,7 +260,7 @@ class TimeBillRepository(private val context: Context) {
         withContext(Dispatchers.IO) {
             appDb.expenseDao().insertExpense(expense)
             val uid = requireUserId()
-            if (uid != "local_offline_user") {
+            if (uid != "local_offline_user" && isInitialNetworkConnected(context)) {
                 try {
                     db.collection("users").document(uid).collection("expenses").document(expense.expenseId)
                         .set(expense)
@@ -276,7 +276,7 @@ class TimeBillRepository(private val context: Context) {
         withContext(Dispatchers.IO) {
             appDb.expenseDao().deleteExpense(expense)
             val uid = requireUserId()
-            if (uid != "local_offline_user") {
+            if (uid != "local_offline_user" && isInitialNetworkConnected(context)) {
                 try {
                     db.collection("users").document(uid).collection("expenses").document(expense.expenseId)
                         .delete()
@@ -310,6 +310,10 @@ class TimeBillRepository(private val context: Context) {
 
     suspend fun syncDataFromFirestore(userId: String) {
         if (userId.isEmpty() || userId == "local_offline_user") return
+        if (!isInitialNetworkConnected(context)) {
+            Log.d("Repo", "No internet connection: Skipping Firestore sync")
+            return
+        }
         withContext(Dispatchers.IO) {
             try {
                 val userDoc = db.collection("users").document(userId).get().await()
