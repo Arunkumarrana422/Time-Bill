@@ -117,7 +117,7 @@ fun AddCustomerScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    val isMobileError = (errorMessage != null && (mobile.isBlank() || mobile.length != 10)) || (mobile.isNotEmpty() && mobile.length < 10)
+                    val isMobileError = mobile.isNotEmpty() && mobile.length < 10
                     OutlinedTextField(
                         value = mobile,
                         onValueChange = {
@@ -125,14 +125,13 @@ fun AddCustomerScreen(
                             mobile = digits
                             if (errorMessage != null) errorMessage = null
                         },
-                        label = { Text("Mobile Number *") },
+                        label = { Text("Mobile Number (Optional)") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         singleLine = true,
                         isError = isMobileError,
                         supportingText = {
                             if (isMobileError) {
-                                val errText = if (mobile.isBlank()) "Mobile number is required *" else "Mobile number must be 10 digits (${mobile.length}/10)"
-                                Text(errText, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                Text("Mobile number must be 10 digits (${mobile.length}/10)", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                             }
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -180,7 +179,7 @@ fun AddCustomerScreen(
                         errorMessage = "Please enter customer name."
                         return@Button
                     }
-                    if (mobile.isBlank() || mobile.length != 10) {
+                    if (mobile.isNotBlank() && mobile.length < 10) {
                         errorMessage = "Please enter a valid 10-digit mobile number."
                         return@Button
                     }

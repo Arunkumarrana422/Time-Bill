@@ -591,7 +591,7 @@ fun ManualJobScreen(
                                     null
                                 }
                             },
-                            label = { Text("Mobile Number") },
+                            label = { Text("Mobile Number (Optional)") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             isError = isMobileError,

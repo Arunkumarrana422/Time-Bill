@@ -83,9 +83,25 @@ fun AuthScreen(
     var mobile by remember { mutableStateOf("") }
     var businessName by remember { mutableStateOf("") }
 
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isEmailAuthLoading by remember { mutableStateOf(false) }
+    var isGoogleAuthLoading by remember { mutableStateOf(false) }
+
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var fullNameError by remember { mutableStateOf<String?>(null) }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+
+    var authBannerError by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
+
+    fun clearAllErrors() {
+        emailError = null
+        passwordError = null
+        fullNameError = null
+        confirmPasswordError = null
+        authBannerError = null
+        successMessage = null
+    }
 
     fun getFirebaseAuth(): FirebaseAuth {
         return try {
@@ -108,8 +124,8 @@ fun AuthScreen(
     }
 
     fun handleFirebaseSignInWithIdToken(idToken: String, accountName: String?, photoUrl: String?) {
-        isLoading = true
-        errorMessage = null
+        isGoogleAuthLoading = true
+        authBannerError = null
         successMessage = null
         scope.launch {
             try {
@@ -145,9 +161,9 @@ fun AuthScreen(
             } catch (e: Exception) {
                 val msg = e.localizedMessage ?: e.message ?: e.toString()
                 Log.e("AuthScreen", "Firebase credential sign-in error: $msg", e)
-                errorMessage = "Firebase Login Error: $msg"
+                authBannerError = "Firebase Login Error: $msg"
             } finally {
-                isLoading = false
+                isGoogleAuthLoading = false
             }
         }
     }
@@ -162,13 +178,13 @@ fun AuthScreen(
             if (idToken != null) {
                 handleFirebaseSignInWithIdToken(idToken, account.displayName, account.photoUrl?.toString())
             } else {
-                errorMessage = "Failed to retrieve Google token. Please try again."
-                isLoading = false
+                authBannerError = "Failed to retrieve Google token. Please try again."
+                isGoogleAuthLoading = false
             }
         } catch (e: ApiException) {
             val statusCode = e.statusCode
             Log.e("AuthScreen", "Google Sign In ApiException status: $statusCode", e)
-            errorMessage = when (statusCode) {
+            authBannerError = when (statusCode) {
                 GoogleSignInStatusCodes.SIGN_IN_CANCELLED -> null
                 GoogleSignInStatusCodes.DEVELOPER_ERROR ->
                     "Google Play Services (10): Google is propagating your SHA-1 key on cloud servers. Please wait 1-2 minutes and tap again."
@@ -176,18 +192,18 @@ fun AuthScreen(
                     "Network error. Please check your internet connection."
                 else -> "Google Sign-In failed (Code $statusCode): ${e.localizedMessage}"
             }
-            isLoading = false
+            isGoogleAuthLoading = false
         } catch (e: Exception) {
             val msg = e.localizedMessage ?: e.message ?: e.toString()
             Log.e("AuthScreen", "Google Sign-In general error: $msg", e)
-            errorMessage = "Sign-in error: $msg"
-            isLoading = false
+            authBannerError = "Sign-in error: $msg"
+            isGoogleAuthLoading = false
         }
     }
 
     fun signInWithGoogle() {
-        isLoading = true
-        errorMessage = null
+        isGoogleAuthLoading = true
+        authBannerError = null
         successMessage = null
         try {
             val serverClientId = context.getString(R.string.default_web_client_id)
@@ -204,8 +220,8 @@ fun AuthScreen(
             }
         } catch (e: Exception) {
             Log.e("AuthScreen", "Error launching Google Sign In: ${e.message}", e)
-            errorMessage = "Could not start Google Sign In: ${e.message}"
-            isLoading = false
+            authBannerError = "Could not start Google Sign In: ${e.message}"
+            isGoogleAuthLoading = false
         }
     }
 
@@ -270,8 +286,7 @@ fun AuthScreen(
                                     selected = !isRegisterMode,
                                     onClick = {
                                         isRegisterMode = false
-                                        errorMessage = null
-                                        successMessage = null
+                                        clearAllErrors()
                                     },
                                     text = { Text("Login", fontWeight = if (!isRegisterMode) FontWeight.Bold else FontWeight.Normal) }
                                 )
@@ -279,8 +294,7 @@ fun AuthScreen(
                                     selected = isRegisterMode,
                                     onClick = {
                                         isRegisterMode = true
-                                        errorMessage = null
-                                        successMessage = null
+                                        clearAllErrors()
                                     },
                                     text = { Text("Create Account", fontWeight = if (isRegisterMode) FontWeight.Bold else FontWeight.Normal) }
                                 )
@@ -305,14 +319,14 @@ fun AuthScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                         }
 
-                        if (errorMessage != null) {
+                        if (authBannerError != null) {
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 color = MaterialTheme.colorScheme.errorContainer,
                                 shape = RoundedCornerShape(10.dp)
                             ) {
                                 Text(
-                                    text = errorMessage!!,
+                                    text = authBannerError!!,
                                     color = MaterialTheme.colorScheme.onErrorContainer,
                                     modifier = Modifier.padding(12.dp),
                                     fontSize = 13.sp
@@ -338,18 +352,18 @@ fun AuthScreen(
                         }
 
                         if (isRegisterMode) {
-                            val isFullNameError = errorMessage != null && fullName.isBlank()
+                            val isFullNameError = fullNameError != null
                             OutlinedTextField(
                                 value = fullName,
                                 onValueChange = { 
                                     fullName = it
-                                    if (errorMessage != null) errorMessage = null
+                                    if (fullNameError != null) fullNameError = null
                                 },
                                 label = { Text("Full Name *") },
                                 isError = isFullNameError,
                                 supportingText = {
                                     if (isFullNameError) {
-                                        Text("Full name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                        Text(fullNameError ?: "Full name is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                                     }
                                 },
                                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
@@ -362,7 +376,7 @@ fun AuthScreen(
                             OutlinedTextField(
                                 value = businessName,
                                 onValueChange = { businessName = it },
-                                label = { Text("Business / Service Name") },
+                                label = { Text("Business / Service Name (Optional)") },
                                 leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
@@ -377,7 +391,7 @@ fun AuthScreen(
                                     val digits = input.filter { it.isDigit() }.take(10)
                                     mobile = digits
                                 },
-                                label = { Text("Mobile Number") },
+                                label = { Text("Mobile Number (Optional)") },
                                 leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                                 isError = isMobileError,
@@ -393,19 +407,18 @@ fun AuthScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                         }
 
-                        val isEmailError = (errorMessage != null && email.isBlank()) || (email.isNotEmpty() && !email.contains("@"))
+                        val isEmailError = emailError != null
                         OutlinedTextField(
                             value = email,
                             onValueChange = { 
                                 email = it
-                                if (errorMessage != null) errorMessage = null
+                                if (emailError != null) emailError = null
                             },
                             label = { Text("Email Address *") },
                             isError = isEmailError,
                             supportingText = {
                                 if (isEmailError) {
-                                    val text = if (email.isBlank()) "Email address is required *" else "Please enter a valid email address"
-                                    Text(text, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                    Text(emailError ?: "Email address is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                                 }
                             },
                             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
@@ -416,19 +429,18 @@ fun AuthScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         if (!isForgotPassword) {
-                            val isPasswordError = errorMessage != null && (password.isBlank() || (isRegisterMode && password.length < 6))
+                            val isPasswordError = passwordError != null
                             OutlinedTextField(
                                 value = password,
                                 onValueChange = { 
                                     password = it
-                                    if (errorMessage != null) errorMessage = null
+                                    if (passwordError != null) passwordError = null
                                 },
                                 label = { Text("Password *") },
                                 isError = isPasswordError,
                                 supportingText = {
                                     if (isPasswordError) {
-                                        val text = if (password.isBlank()) "Password is required *" else "Password must be at least 6 characters"
-                                        Text(text, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                        Text(passwordError ?: "Password is required *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                                     }
                                 },
                                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
@@ -454,8 +466,7 @@ fun AuthScreen(
                                     TextButton(
                                         onClick = {
                                             isForgotPassword = true
-                                            errorMessage = null
-                                            successMessage = null
+                                            clearAllErrors()
                                         },
                                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                                     ) {
@@ -473,19 +484,18 @@ fun AuthScreen(
                         }
 
                         if (isRegisterMode) {
-                            val isConfirmPasswordError = errorMessage != null && (confirmPassword.isBlank() || confirmPassword != password)
+                            val isConfirmPasswordError = confirmPasswordError != null
                             OutlinedTextField(
                                 value = confirmPassword,
                                 onValueChange = { 
                                     confirmPassword = it
-                                    if (errorMessage != null) errorMessage = null
+                                    if (confirmPasswordError != null) confirmPasswordError = null
                                 },
                                 label = { Text("Confirm Password *") },
                                 isError = isConfirmPasswordError,
                                 supportingText = {
                                     if (isConfirmPasswordError) {
-                                        val text = if (confirmPassword.isBlank()) "Please confirm your password *" else "Passwords do not match *"
-                                        Text(text, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                        Text(confirmPasswordError ?: "Passwords do not match *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                                     }
                                 },
                                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
@@ -512,33 +522,39 @@ fun AuthScreen(
                         // Main Action Button
                         Button(
                             onClick = {
+                                var hasFormError = false
                                 if (isRegisterMode && fullName.isBlank()) {
-                                    errorMessage = "Please enter your full name."
-                                    return@Button
-                                }
-                                if (isRegisterMode && mobile.isNotEmpty() && mobile.length < 10) {
-                                    errorMessage = "Mobile number must be 10 digits (${mobile.length}/10)."
-                                    return@Button
+                                    fullNameError = "Please enter your full name *"
+                                    hasFormError = true
                                 }
                                 if (email.isBlank()) {
-                                    errorMessage = "Please enter your email address."
-                                    return@Button
+                                    emailError = "Please enter your email address *"
+                                    hasFormError = true
+                                } else if (!email.contains("@") || !email.contains(".")) {
+                                    emailError = "Please enter a valid email address *"
+                                    hasFormError = true
                                 }
                                 if (!isForgotPassword && password.isBlank()) {
-                                    errorMessage = "Please enter your password."
-                                    return@Button
+                                    passwordError = "Please enter your password *"
+                                    hasFormError = true
+                                } else if (isRegisterMode && password.length < 6) {
+                                    passwordError = "Password must be at least 6 characters *"
+                                    hasFormError = true
                                 }
-                                if (isRegisterMode && password != confirmPassword) {
-                                    errorMessage = "Passwords do not match."
-                                    return@Button
+                                if (isRegisterMode && confirmPassword.isBlank()) {
+                                    confirmPasswordError = "Please confirm your password *"
+                                    hasFormError = true
+                                } else if (isRegisterMode && password != confirmPassword) {
+                                    confirmPasswordError = "Passwords do not match *"
+                                    hasFormError = true
                                 }
-                                if (isRegisterMode && password.length < 6) {
-                                    errorMessage = "Password must be at least 6 characters."
+
+                                if (hasFormError) {
                                     return@Button
                                 }
 
-                                isLoading = true
-                                errorMessage = null
+                                isEmailAuthLoading = true
+                                authBannerError = null
                                 scope.launch {
                                     try {
                                         val fAuth = getFirebaseAuth()
@@ -594,7 +610,7 @@ fun AuthScreen(
                                     } catch (e: Exception) {
                                         val msg = e.localizedMessage ?: e.message ?: ""
                                         Log.e("AuthScreen", "Auth error: $msg", e)
-                                        errorMessage = when {
+                                        authBannerError = when {
                                             msg.contains("already in use", ignoreCase = true) || msg.contains("EMAIL_EXISTS", ignoreCase = true) ->
                                                 "This email is already registered. Please sign in or reset password."
                                             msg.contains("badly formatted", ignoreCase = true) || msg.contains("invalid-email", ignoreCase = true) ->
@@ -614,7 +630,7 @@ fun AuthScreen(
                                             else -> "Authentication failed: $msg"
                                         }
                                     } finally {
-                                        isLoading = false
+                                        isEmailAuthLoading = false
                                     }
                                 }
                             },
@@ -622,9 +638,9 @@ fun AuthScreen(
                                 .fillMaxWidth()
                                 .height(50.dp),
                             shape = RoundedCornerShape(12.dp),
-                            enabled = !isLoading
+                            enabled = !isEmailAuthLoading && !isGoogleAuthLoading
                         ) {
-                            if (isLoading) {
+                            if (isEmailAuthLoading) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(22.dp),
                                     color = MaterialTheme.colorScheme.onPrimary,
@@ -676,7 +692,7 @@ fun AuthScreen(
                                     .fillMaxWidth()
                                     .height(50.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                enabled = !isLoading,
+                                enabled = !isEmailAuthLoading && !isGoogleAuthLoading,
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     containerColor = MaterialTheme.colorScheme.surface
                                 ),
@@ -685,23 +701,31 @@ fun AuthScreen(
                                     MaterialTheme.colorScheme.outlineVariant
                                 )
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_google_logo),
-                                        contentDescription = "Google Logo",
-                                        tint = Color.Unspecified,
-                                        modifier = Modifier.size(22.dp)
+                                if (isGoogleAuthLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(22.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        strokeWidth = 2.5.dp
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = "Sign in with Google",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                } else {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_google_logo),
+                                            contentDescription = "Google Logo",
+                                            tint = Color.Unspecified,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = "Sign in with Google",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -711,8 +735,7 @@ fun AuthScreen(
                             TextButton(
                                 onClick = {
                                     isForgotPassword = false
-                                    errorMessage = null
-                                    successMessage = null
+                                    clearAllErrors()
                                 }
                             ) {
                                 Text("Back to Login", fontWeight = FontWeight.Medium)
