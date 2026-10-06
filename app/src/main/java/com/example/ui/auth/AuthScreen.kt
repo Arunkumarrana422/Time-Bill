@@ -35,6 +35,12 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.example.R
 import com.example.data.model.UserProfile
 import com.example.data.repository.TimeBillRepository
@@ -43,6 +49,9 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
@@ -187,7 +196,7 @@ fun AuthScreen(
             authBannerError = when (statusCode) {
                 GoogleSignInStatusCodes.SIGN_IN_CANCELLED -> null
                 GoogleSignInStatusCodes.DEVELOPER_ERROR ->
-                    "Google Play Services (10): Google is propagating your SHA-1 key on cloud servers. Please wait 1-2 minutes and tap again."
+                    "Google Play Services (10): Ensure Google Sign-In is enabled in Firebase Authentication Console and SHA-1 certificate is synced."
                 GoogleSignInStatusCodes.NETWORK_ERROR ->
                     "Network error. Please check your internet connection."
                 else -> "Google Sign-In failed (Code $statusCode): ${e.localizedMessage}"
@@ -201,10 +210,7 @@ fun AuthScreen(
         }
     }
 
-    fun signInWithGoogle() {
-        isGoogleAuthLoading = true
-        authBannerError = null
-        successMessage = null
+    fun launchLegacyGoogleSignIn() {
         try {
             val serverClientId = context.getString(R.string.default_web_client_id)
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -213,15 +219,69 @@ fun AuthScreen(
                 .requestProfile()
                 .build()
             val googleSignInClient = GoogleSignIn.getClient(context, gso)
-            // Sign out first to ensure user can pick any account cleanly every time
             googleSignInClient.signOut().addOnCompleteListener {
                 val signInIntent = googleSignInClient.signInIntent
                 googleSignInLauncher.launch(signInIntent)
             }
         } catch (e: Exception) {
-            Log.e("AuthScreen", "Error launching Google Sign In: ${e.message}", e)
+            Log.e("AuthScreen", "Error launching legacy Google Sign In: ${e.message}", e)
             authBannerError = "Could not start Google Sign In: ${e.message}"
             isGoogleAuthLoading = false
+        }
+    }
+
+    fun signInWithGoogle() {
+        isGoogleAuthLoading = true
+        authBannerError = null
+        successMessage = null
+
+        val serverClientId = context.getString(R.string.default_web_client_id)
+        val activity = context.findActivity()
+
+        if (activity == null) {
+            launchLegacyGoogleSignIn()
+            return
+        }
+
+        scope.launch {
+            try {
+                val credentialManager = CredentialManager.create(activity)
+                val googleIdOption = GetSignInWithGoogleOption.Builder(serverClientId)
+                    .build()
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleIdOption)
+                    .build()
+
+                val result = credentialManager.getCredential(
+                    request = request,
+                    context = activity
+                )
+
+                val credential = result.credential
+                if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    handleFirebaseSignInWithIdToken(
+                        googleIdTokenCredential.idToken,
+                        googleIdTokenCredential.displayName,
+                        googleIdTokenCredential.profilePictureUri?.toString()
+                    )
+                } else {
+                    launchLegacyGoogleSignIn()
+                }
+            } catch (e: GetCredentialCancellationException) {
+                // User cancelled account picker
+                Log.d("AuthScreen", "CredentialManager cancelled by user")
+                isGoogleAuthLoading = false
+            } catch (e: NoCredentialException) {
+                Log.d("AuthScreen", "No saved credential found, launching account picker via legacy intent")
+                launchLegacyGoogleSignIn()
+            } catch (e: GetCredentialException) {
+                Log.w("AuthScreen", "CredentialManager exception (${e.type}): ${e.message}, falling back to GoogleSignInClient")
+                launchLegacyGoogleSignIn()
+            } catch (e: Exception) {
+                Log.w("AuthScreen", "General CredentialManager error: ${e.message}, falling back to legacy")
+                launchLegacyGoogleSignIn()
+            }
         }
     }
 
